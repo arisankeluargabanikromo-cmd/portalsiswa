@@ -112,7 +112,8 @@
   }
 
   const Data = {
-    user: null, role: 'pending', onError: null,
+    user: null, role: 'pending', onError: null, onStatus: null, status: 'ok',
+    _st(s) { Data.status = s; if (Data.onStatus) Data.onStatus(s); },
     canWrite: () => ['admin', 'pengurus'].includes(Data.role),
 
     async init() {
@@ -170,9 +171,9 @@
       const p = plan(db);
       const until = Date.now() + 4000; // abaikan gema realtime dari tulisan sendiri
       Object.keys(p.up).concat(Object.keys(p.del)).forEach(k => own.set(k === 'cfg' ? 'pengaturan' : MAP[k].table, until));
-      busy++;
-      chain = chain.then(() => run(p))
-        .catch(e => { if (Data.onError) Data.onError(e); })
+      busy++; Data._st('saving');
+      chain = chain.then(() => run(p)).then(() => Data._st(busy > 1 ? 'saving' : 'ok'))
+        .catch(e => { Data._st('error'); if (Data.onError) Data.onError(e); })
         .then(() => { busy--; lastPush = Date.now(); });
       return chain;
     },
