@@ -241,6 +241,17 @@
     async setRole(id, role) {
       const { error } = await sb.from('profiles').update({ role }).eq('id', id);
       if (error) throw error;
+    },
+
+    // Preferensi tema per akun (tabel 'preferensi', migrasi 006). Gagal diam-diam bila tabel belum ada.
+    async getTema() {
+      if (!Data.user) return null;
+      const { data, error } = await sb.from('preferensi').select('tema').eq('uid', Data.user.id).maybeSingle();
+      return error || !data ? null : data.tema;
+    },
+    async setTema(tema) {
+      if (!Data.user) return;
+      await sb.from('preferensi').upsert({ uid: Data.user.id, tema, updated_at: new Date().toISOString() });
     }
   };
   window.Data = Data;

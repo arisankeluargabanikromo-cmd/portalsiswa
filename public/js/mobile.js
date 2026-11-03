@@ -65,6 +65,7 @@
       g += `<section class='mn-g'><h4>Pengaturan</h4><div class='mn-l'>${rows.join('')}</div></section>`
         + `<section class='mn-g'><h4>Beranda</h4><div class='mn-l'><button type='button' class='mn-r' data-edit style='--c:var(--pr)'><span class='mn-i'>${S(IC.sliders)}</span><span><b>Atur layanan Beranda</b><small>Pilih menu yang tampil di layar utama</small></span>${S(IC.chev)}</button></div></section>`;
     }
+    g += `<section class='mn-g'><h4>Tampilan</h4><div class='mn-l mn-p'>${Theme.picker()}<p class='mn-n'>Terang, gelap, atau mengikuti pengaturan perangkat. Pilihan tersimpan di perangkat ini.</p></div></section>`;
     return `<div class='mn-h'><div class='mn-a'>${esc((email[0] || '?').toUpperCase())}</div><div><b>${esc(email)}</b><small>${esc(db.cfg.sekolah || 'SekolahHub')}</small><span class='tag'>${esc(ROLE[Data.role] || Data.role)}</span></div></div>`
       + g + `<button class='mn-out' onclick='Data.logout()'>Keluar dari akun</button><p class='mn-v'>SekolahHub · ${esc(db.cfg.sekolah || '')}</p>`;
   };
@@ -106,8 +107,7 @@
     $('#mlead').innerHTML = isTop(cur) ? LOGO : `<button type='button' data-back aria-label='Kembali'>${S(IC.back)}</button>`;
     const [a, b] = titles(); $('#mtt b').textContent = a; $('#mtt span').textContent = b;
     document.title = (a || 'SekolahHub') + ' – SekolahHub';
-    const m = document.querySelector('meta[name=theme-color]');
-    if (m) { const v = getComputedStyle(document.documentElement).getPropertyValue(home ? '--hg' : '--s2').trim(); if (v) m.content = v }
+    if (window.Theme) Theme.meta();
   }
   function goBack() {
     if (cur == 'ubah') location.hash = 'profil-' + PID;
@@ -125,8 +125,8 @@
   const ACT = { trx: ['Setor / Tarik', 'tabungan', 'var(--pr)'], massal: ['Setoran massal', 'siswa', 'var(--inf)'], kas: ['Catat kas', 'kas', 'var(--ok)'], siswa: ['Tambah siswa', '+', 'var(--ac)'] };
   function promos() {
     const t = today(), mk2 = (k, x, href, g) => ({ k, t: x.judul, d: x.tgl, href, g });
-    const inf = db.info.slice().sort((a, b) => b.tgl.localeCompare(a.tgl)).slice(0, 3).map(x => mk2('Pengumuman', x, '#pengumuman', ['#b98410', '#7a5206']));
-    const ag = db.agenda.filter(a => a.tgl >= t).sort((a, b) => a.tgl.localeCompare(b.tgl)).slice(0, 3).map(x => mk2('Agenda', x, '#agenda', ['#5666c9', '#343f94']));
+    const inf = db.info.slice().sort((a, b) => b.tgl.localeCompare(a.tgl)).slice(0, 3).map(x => mk2('Pengumuman', x, '#pengumuman', ['var(--pa1)', 'var(--pa2)']));
+    const ag = db.agenda.filter(a => a.tgl >= t).sort((a, b) => a.tgl.localeCompare(b.tgl)).slice(0, 3).map(x => mk2('Agenda', x, '#agenda', ['var(--pi1)', 'var(--pi2)']));
     const out = []; for (let i = 0; i < 3; i++) { if (ag[i]) out.push(ag[i]); if (inf[i]) out.push(inf[i]) }
     return out;
   }
