@@ -8,7 +8,7 @@
   /* Semantik: masuk/baik, keluar/buruk, peringatan, kategori */
   --ok:#4cc58a;--er:#ff8a84;--ac:#f0b72f;--inf:#8b9cff;--rose:#e58bb6;
   /* Seri grafik kategori (kelas, dll.) */
-  --c1:var(--pr);--c2:var(--inf);--c3:var(--ac);--c4:var(--rose);
+  --ov:rgba(255,255,255,.09);--c1:var(--pr);--c2:var(--inf);--c3:var(--ac);--c4:var(--rose);
   /* Efek */
   --gl:blur(18px) saturate(140%);--sh:0 10px 34px -16px rgba(0,0,0,.7);
   color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
