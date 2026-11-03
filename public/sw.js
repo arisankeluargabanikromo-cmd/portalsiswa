@@ -1,6 +1,6 @@
 /* Service worker: jaringan dulu, cache sebagai cadangan. Data tetap dari Supabase (lintas origin, tidak disentuh). */
-const V = 'sekolahhub-v2.1';
-const SHELL = ['./', 'css/style.css', 'css/mobile.css', 'js/config.js', 'js/data.js', 'js/app.js', 'js/mobile.js', 'vendor/supabase.js', 'manifest.webmanifest', 'icons/icon-192.png'];
+const V = 'sekolahhub-v2.2';
+const SHELL = ['./', 'css/style.css', 'css/mobile.css', 'js/theme.js', 'js/config.js', 'js/data.js', 'js/app.js', 'js/mobile.js', 'vendor/supabase.js', 'manifest.webmanifest', 'icons/icon-192.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x != V).map(x => caches.delete(x)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', e => {
