@@ -354,15 +354,6 @@ A.anak=async uid=>{try{const cur=await Data.children(uid);
   form('Tautkan anak ke akun orang tua',[{k:'s',l:'Pilih siswa (boleh lebih dari satu)',t:'multi',o:sopt()}],{s:cur},o=>{Data.setChildren(uid,o.s).then(()=>{toast('Tautan anak disimpan');go()},e=>toast(e.message))},'Simpan tautan')}catch(e){toast(e.message)}};
 
 /* ===== Autentikasi & boot ===== */
-function authScreen(mode,msg){
-  const a=$('#auth');a.hidden=false;const bc=Brand.cached(),bl=bc.u?`<img class='alg' src='${esc(bc.u)}' alt='' width='64' height='64' onerror='this.remove()'>`:'';a.classList.toggle('has-logo',!!bc.u);
-  if(mode=='pending'){
-    a.innerHTML=`<div class='card'>${bl}<h1>Menunggu persetujuan</h1><p class='lab'>Akun ${esc(Data.user.email)} sudah terdaftar. Admin perlu menyetujui akun ini sebelum data sekolah bisa dibuka.</p><div class='acts'><button id='re'>Periksa lagi</button><button id='lo'>Keluar</button></div></div><button type='button' class='thf' data-theme-cycle><span data-theme-icon></span></button>`;Theme.refresh();
-    $('#re').onclick=()=>location.reload();$('#lo').onclick=()=>Data.logout();return}
-  a.innerHTML=`<div class='card'>${bl}<h1>SekolahHub</h1><p class='lab'>${bc.n?esc(bc.n)+' · ':''}Masuk untuk mengelola tabungan dan data kelas.</p><label>Email<input id='em' type='email' autocomplete='username'></label><label>Kata sandi<input id='pw' type='password' autocomplete='current-password'></label><div id='aerr' class='msg'>${esc(msg||'')}</div><div class='acts'><button id='su'>Daftar akun baru</button><button class='p' id='li'>Masuk</button></div></div><button type='button' class='thf' data-theme-cycle><span data-theme-icon></span></button>`;Theme.refresh();
-  const run=async f=>{const e=$('#em').value.trim(),p=$('#pw').value;if(!e||p.length<6){$('#aerr').textContent='Isi email dan kata sandi (minimal 6 karakter).';return}
-    $('#aerr').textContent='Memproses...';try{const m=await f(e,p);if(m)$('#aerr').textContent=m;else boot()}catch(x){$('#aerr').textContent=x.message}};
-  $('#li').onclick=()=>run(Data.login);$('#su').onclick=()=>run(Data.signup);$('#pw').onkeydown=x=>{if(x.key=='Enter')run(Data.login)}}
 async function start(){
   $('#auth').hidden=true;load(await Data.pull());Brand.sync();TB.init();go();Theme.bind({get:Data.getTema,set:Data.setTema});
   Data.onError=async e=>{toast(e.code=='42501'||/row-level|permission/i.test(e.message)?'Anda tidak punya izin untuk perubahan ini.':'Gagal menyimpan: '+e.message);load(await Data.pull());go()};
