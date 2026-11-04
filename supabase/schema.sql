@@ -233,3 +233,42 @@ create policy foto_update on storage.objects for update to authenticated
   using (bucket_id = 'foto-siswa' and public.my_role() in ('pengurus','admin'));
 create policy foto_delete on storage.objects for delete to authenticated
   using (bucket_id = 'foto-siswa' and public.my_role() in ('pengurus','admin'));
+
+-- ============ Preferensi tampilan (migrasi 006) ============
+-- Preferensi tampilan per akun (tema terang/gelap/ikuti perangkat).
+-- Tabel TERPISAH dari profiles dengan sengaja: profiles_update hanya untuk admin; membuka update pada
+-- profiles agar pengguna bisa menyimpan tema akan memungkinkan mereka mengubah perannya sendiri.
+create table if not exists public.preferensi (
+  uid uuid primary key references auth.users(id) on delete cascade,
+  tema text not null default 'system' check (tema in ('system','light','dark')),
+  updated_at timestamptz not null default now()
+);
+alter table public.preferensi enable row level security;
+drop policy if exists preferensi_own on public.preferensi;
+create policy preferensi_own on public.preferensi for all to authenticated
+  using (uid = auth.uid()) with check (uid = auth.uid());
+
+-- ============ Logo & identitas sekolah (migrasi 007) ============
+-- Logo & identitas tambahan sekolah.
+alter table public.pengaturan
+  add column if not exists logo text default '',
+  add column if not exists kepsek text default '',
+  add column if not exists alamat text default '',
+  add column if not exists telp text default '';
+
+-- Bucket logo bersifat PUBLIK (logo bukan data sensitif; perlu tampil di layar masuk sebelum login).
+-- Hanya admin yang boleh mengunggah, mengganti, atau menghapus.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('logo-sekolah', 'logo-sekolah', true, 524288, array['image/png','image/jpeg','image/webp'])
+on conflict (id) do update set public = true, file_size_limit = 524288,
+  allowed_mime_types = array['image/png','image/jpeg','image/webp'];
+
+drop policy if exists logo_insert on storage.objects;
+drop policy if exists logo_update on storage.objects;
+drop policy if exists logo_delete on storage.objects;
+create policy logo_insert on storage.objects for insert to authenticated
+  with check (bucket_id = 'logo-sekolah' and public.my_role() = 'admin');
+create policy logo_update on storage.objects for update to authenticated
+  using (bucket_id = 'logo-sekolah' and public.my_role() = 'admin');
+create policy logo_delete on storage.objects for delete to authenticated
+  using (bucket_id = 'logo-sekolah' and public.my_role() = 'admin');
