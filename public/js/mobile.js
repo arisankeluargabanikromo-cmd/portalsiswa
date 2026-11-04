@@ -104,7 +104,7 @@
     }
     const home = cur == 'dashboard' || cur == 'portal';
     document.body.classList.toggle('home', home);
-    $('#mlead').innerHTML = isTop(cur) ? LOGO : `<button type='button' data-back aria-label='Kembali'>${S(IC.back)}</button>`;
+    $('#mlead').innerHTML = isTop(cur) ? (Brand.url() ? Brand.tile(36, 'mlt') : LOGO) : `<button type='button' data-back aria-label='Kembali'>${S(IC.back)}</button>`;
     const [a, b] = titles(); $('#mtt b').textContent = a; $('#mtt span').textContent = b;
     document.title = (a || 'SekolahHub') + ' – SekolahHub';
     if (window.Theme) Theme.meta();
@@ -249,6 +249,7 @@
     if (t === $('#qs')) { const r = t.getBoundingClientRect(); if (e.clientY < r.top || e.clientY > r.bottom || e.clientX < r.left || e.clientX > r.right) t.close(); return }
     if (c('#gr a,#gr .pi')) setTimeout(closeSearch, 0);
   });
+  addEventListener('brandchange', () => { try { head() } catch (e) {} });
   addEventListener('hashchange', () => { hops++; closeSearch(); const q = $('#qs'); if (q && q.open) q.close() });
   addEventListener('scroll', () => {
     const t = $('#top'); if (t) t.classList.toggle('sc', scrollY > 4);
