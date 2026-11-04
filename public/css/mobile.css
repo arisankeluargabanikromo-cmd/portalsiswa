@@ -298,13 +298,6 @@ body.home #mlead .mlt.has{border-color:transparent}
 .sh-f button{flex:1}
 
 /* ===== Layar masuk ===== */
-#auth{place-items:start center;padding:max(10vh,24px) 20px 24px;overflow:auto;background:var(--bg)}
-#auth .card{background:none;border:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;padding:0;width:100%;max-width:420px}
-#auth h1{font-size:30px;letter-spacing:-.02em;margin-bottom:6px;color:var(--tx)}
-#auth h1::before{content:'';display:block;width:64px;height:64px;margin-bottom:20px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%235fd0cb'/%3E%3Cpath d='M32 17l20 9-20 9-20-9z' fill='%2306201f'/%3E%3Cpath d='M20 34v8c0 3 6 6 12 6s12-3 12-6v-8l-12 5.5z' fill='%2306201f'/%3E%3Cpath d='M52 26v14' stroke='%2306201f' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat}
-:root[data-theme=light] #auth h1::before{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230a7571'/%3E%3Cpath d='M32 17l20 9-20 9-20-9z' fill='%23ffffff'/%3E%3Cpath d='M20 34v8c0 3 6 6 12 6s12-3 12-6v-8l-12 5.5z' fill='%23ffffff'/%3E%3Cpath d='M52 26v14' stroke='%23ffffff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat}
-#auth .acts{flex-direction:column-reverse;gap:10px}
-#auth .acts button{width:100%;min-height:52px}
 
 }
 
