@@ -85,6 +85,12 @@ Menambah layanan baru: tambahkan satu entri di `NAV` pada `app.js`. Grid dan she
 
 Orang tua mendaftar sendiri dari halaman login. Admin membuka menu **Pengguna**, mengubah peran akun itu menjadi `ortu`, lalu menekan **Atur** untuk menautkan satu atau lebih anak. Orang tua hanya melihat saldo, iuran, kehadiran, dan transaksi anaknya sendiri, ditambah pengumuman dan agenda. Pembatasan ini dijaga oleh Row Level Security di database, jadi orang tua tidak bisa membuka data siswa lain walau memakai alat selain aplikasi ini.
 
+## Foto tidak tampil setelah deploy
+
+Gejala klasik: foto tampil di localhost tetapi kosong di Vercel. Penyebabnya hampir selalu **Content-Security-Policy** di `vercel.json`: header itu hanya berlaku di Vercel, dan `img-src` harus memuat `https://*.supabase.co` karena foto disajikan dari Supabase Storage lewat URL bertanda tangan. Pastikan `vercel.json` versi terbaru ter-deploy, lalu bersihkan cache aplikasi.
+
+Untuk mengetahui penyebab pastinya tanpa membuka console, buka *Pengaturan > Data > Tes tampilan foto*. Alat ini membuat URL foto, memeriksa respons server, dan mendeteksi pelanggaran CSP, lalu menyebut langkah perbaikannya. Bila foto gagal dimuat karena alasan apa pun, avatar kini kembali menampilkan inisial dan sampul menampilkan gradien (bukan lingkaran/area kosong).
+
 ## Foto dan kinerja
 
 Foto profil dan sampul disimpan di **Supabase Storage** (bucket privat `foto-siswa`, maksimal 1 MB per file, hanya JPEG). Di database hanya tersimpan nama file, jadi data siswa tetap ringan. Foto diakses lewat URL bertanda tangan yang berlaku 24 jam, dan orang tua hanya bisa membuka foto anaknya. Foto lama yang masih tersimpan langsung di database bisa dipindahkan lewat tombol di **Pengaturan**. Pembaruan realtime hanya memuat ulang tabel yang berubah.
