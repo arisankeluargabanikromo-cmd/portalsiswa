@@ -3,7 +3,7 @@
    $, esc, rp, fd, today, toast, logA, ico, sis, saldo, total, kelasList, csv, WA_TAB, WA_IUR. */
 (() => {
   'use strict';
-  const VER = '2.3.0';
+  const VER = '2.4.1';
   const adm = () => Data.role == 'admin';
   const ROLE = { admin: 'Admin', pengurus: 'Pengurus', viewer: 'Hanya lihat', ortu: 'Orang tua', pending: 'Menunggu' };
   /* Koleksi data yang dapat dihapus. DEP = ikut terhapus bila data siswa dihapus. */
@@ -97,8 +97,9 @@
       + kv('Kas kelas', cnt('kas')) + kv('Agenda · Pengumuman · Voting', cnt('agenda') + ' · ' + cnt('info') + ' · ' + cnt('vote')) + kv('Ukuran data', size + ' KB')
       + `<div class='pbar' style='margin-top:14px'><button type='button' class='p' onclick='A.unduh()'>Unduh cadangan (.json)</button>${a ? `<button type='button' onclick='A.pulihkan()'>Pulihkan dari berkas</button>` : ''}</div>`
       + `<h4 class='sh4'>Ekspor CSV (Excel / Sheets)</h4><div class='pbar'><button type='button' onclick='A.csvSiswa()'>Data siswa</button><button type='button' onclick='A.csvTrx()'>Transaksi</button><button type='button' onclick='A.csvIuran()'>Iuran</button><button type='button' onclick='A.csvKas()'>Kas</button><button type='button' onclick='A.csvAbsen()'>Absensi</button></div>`
+      + (Data.canWrite() ? `<h4 class='sh4'>Impor dari Excel</h4><p class='lab'>Unggah berkas .xlsx atau .csv. Setiap jenis data punya template Excel yang bisa diunduh di dalam dialog impor.</p><div class='pbar'>${[['siswa', 'Data siswa'], ['tab', 'Tabungan'], ['iuran', 'Iuran'], ['absensi', 'Absensi'], ['kas', 'Kas'], ['agenda', 'Agenda'], ['info', 'Pengumuman']].map(x => `<button type='button' onclick="IMP.open('${x[0]}')">${x[1]}</button>`).join('')}</div>` : '')
       + (migr && Data.canWrite() ? `<h4 class='sh4'>Foto siswa</h4><p class='lab'>${migr} foto lama masih tersimpan langsung di database sehingga memperberat pemuatan. Pindahkan ke Supabase Storage.</p><div class='pbar'><button type='button' class='p' onclick='A.migrasiFoto()'>Pindahkan ke Storage</button></div>` : '')
-      + `<h4 class='sh4'>Pemeliharaan</h4><div class='pbar'><button type='button' onclick='A.muat()'>Muat ulang data dari server</button><button type='button' onclick='A.cache()'>Bersihkan cache aplikasi</button></div><p class='lab'>Bersihkan cache bila tampilan tidak ikut berubah setelah pembaruan aplikasi.</p>`);
+      + `<h4 class='sh4'>Pemeliharaan</h4><div class='pbar'><button type='button' onclick='A.muat()'>Muat ulang data dari server</button><button type='button' onclick='A.cache()'>Bersihkan cache aplikasi</button><button type='button' onclick='A.diagFoto()'>Tes tampilan foto</button></div><p class='lab'>Bersihkan cache bila tampilan tidak ikut berubah setelah pembaruan aplikasi.</p>`);
 
     /* Akun */
     h += sec('akun', head('akun', 'Akun', 'Keamanan dan informasi aplikasi.')
@@ -233,6 +234,26 @@
     async cache() {
       try { const r = (navigator.serviceWorker && await navigator.serviceWorker.getRegistrations()) || []; await Promise.all(r.map(x => x.unregister())); const k = await caches.keys(); await Promise.all(k.map(x => caches.delete(x))) } catch (e) {}
       location.reload();
+    },
+    /* Diagnosa foto: memisahkan penyebab (tak ada foto / URL gagal / diblokir CSP) tanpa perlu membuka console */
+    async diagFoto() {
+      const ps = db.siswa.map(s => s.foto).filter(f => f && !String(f).startsWith('data:'));
+      const out = (rows, note) => dlg(`<h3>Tes tampilan foto</h3>${rows.map(r => `<div class='kv'><span class='mu'>${r[0]}</span><b class='${r[2] || ''}'>${r[1]}</b></div>`).join('')}${note ? `<p class='lab' style='margin-top:12px'>${note}</p>` : ''}<div class='acts'><span class='sp'></span><button class='p' id='x'>Tutup</button></div>`);
+      if (!ps.length) return out([['Foto di Storage', 'Belum ada']], 'Belum ada siswa dengan foto di Supabase Storage. Unggah satu foto di profil siswa, lalu ulangi tes.');
+      const url = Data.url(ps[0]); const rows = [['Foto di Storage', ps.length + ' berkas'], ['URL bertanda tangan', url ? 'Berhasil dibuat' : 'Gagal dibuat']];
+      if (!url) return out(rows, 'URL tidak bisa dibuat. Pastikan migrasi 005 (bucket foto-siswa dan kebijakannya) sudah dijalankan di Supabase.');
+      let viol = '', status = '';
+      const onV = e => { viol = e.violatedDirective || e.effectiveDirective || 'CSP' };
+      document.addEventListener('securitypolicyviolation', onV);
+      try { const r = await fetch(url, { method: 'HEAD' }); status = r.status + '' } catch (e) { status = 'gagal (jaringan/CORS)' }
+      const loaded = await new Promise(res => { const i = new Image(); i.onload = () => res(true); i.onerror = () => res(false); i.src = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now() });
+      await new Promise(r => setTimeout(r, 60)); document.removeEventListener('securitypolicyviolation', onV);
+      rows.push(['Respons server', status, /^2/.test(status) ? 'ok' : 'er'], ['Gambar tampil di peramban', loaded ? 'Ya' : 'Tidak', loaded ? 'ok' : 'er']);
+      if (loaded) return out(rows, 'Foto dapat dimuat. Bila foto masih kosong di halaman, muat ulang dengan Ctrl+Shift+R atau gunakan Bersihkan cache aplikasi.');
+      if (viol) return out(rows, `<b>Diblokir oleh Content-Security-Policy</b> (${esc(viol)}). Pastikan <code>vercel.json</code> terbaru ter-deploy: aturan <code>img-src</code> harus memuat <code>https://*.supabase.co</code>. Lalu deploy ulang dan bersihkan cache aplikasi.`);
+      if (/^(400|401|403)/.test(status)) return out(rows, 'Server menolak akses. Jalankan migrasi 005 (kebijakan storage) dan pastikan akun ini berstatus admin, pengurus, viewer, atau orang tua yang berhak.');
+      if (/^404/.test(status)) return out(rows, 'Berkas foto tidak ditemukan di bucket. Unggah ulang foto siswa.');
+      return out(rows, 'Gambar gagal dimuat tanpa pelanggaran CSP. Periksa koneksi internet atau status proyek Supabase.');
     },
     sandi() {
       dlg(`<h3>Ganti kata sandi</h3><label>Kata sandi baru<input id='pw1' type='password' autocomplete='new-password'></label><label>Ulangi kata sandi<input id='pw2' type='password' autocomplete='new-password'></label><div class='msg' id='pwe'></div><div class='acts'><button id='x'>Batal</button><button class='p' id='ok'>Simpan</button></div>`, d => {
