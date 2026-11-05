@@ -10,11 +10,13 @@ sekolahhub/
 │  ├─ index.html
 │  ├─ css/style.css        ← tampilan desktop + SEMUA token warna tema terang & gelap (glassmorphism)
 │  ├─ css/mobile.css       ← tampilan mobile gaya Android (Material 3), aktif di layar ≤ 860px
+│  ├─ css/idcard.css       ← tab Kartu ID (antarmuka, memakai token tema) + desain kartu CR80 dan aturan cetak
 │  ├─ js/app.js            ← logika aplikasi (UI, tabungan, voting, laporan)
 │  ├─ js/data.js           ← lapisan Supabase (login, sinkronisasi, realtime)
 │  ├─ js/theme.js          ← pemilih tema terang / gelap / ikuti perangkat (dimuat di <head>)
 │  ├─ js/pengaturan.js     ← halaman Pengaturan: identitas + logo, hak akses, data & cadangan, akun, reset
 │  ├─ js/import.js         ← impor data dari Excel (.xlsx) / CSV + template
+│  ├─ js/idcard.js         ← kartu ID siswa: pembuat QR, desain kartu, galeri, sistem cetak A4 / CR80
 │  ├─ vendor/fflate.min.js ← pustaka zip (MIT) untuk membaca/menulis .xlsx
 │  ├─ js/auth.js           ← layar masuk / daftar / menunggu persetujuan
 │  ├─ js/mobile.js         ← navigasi bawah, app bar, FAB, halaman Menu, tabel jadi kartu
@@ -61,6 +63,7 @@ sekolahhub/
 - **Absensi:** kehadiran harian per kelas (Hadir, Sakit, Izin, Alpa) dengan rekap bulanan dan ringkasan di profil siswa.
 - **Kas kelas, agenda, pengumuman, voting, struktur kelas, laporan** (bisa dicetak atau diekspor CSV), dan **riwayat aktivitas**.
 - **Profil siswa** bergaya media sosial dengan data lengkap, foto, dan sampul.
+- **Kartu ID siswa** (tab *Kartu ID* di Data Siswa): kartu pelajar berfoto ukuran CR80 dengan kode QR, siap cetak. Lihat bagian *Kartu ID siswa*.
 - **Pengingat WhatsApp:** daftar siswa yang belum menabung atau belum lunas iuran bulan ini, lengkap dengan tombol kirim yang membuka WhatsApp dengan pesan terisi. Isi pesan bisa diubah di Pengaturan. Bukti setoran juga bisa dikirim ke wali.
 - **Ekspor CSV** untuk data siswa, transaksi, dan rekap tabungan.
 
@@ -94,6 +97,40 @@ Untuk mengetahui penyebab pastinya tanpa membuka console, buka *Pengaturan > Dat
 ## Foto dan kinerja
 
 Foto profil dan sampul disimpan di **Supabase Storage** (bucket privat `foto-siswa`, maksimal 1 MB per file, hanya JPEG). Di database hanya tersimpan nama file, jadi data siswa tetap ringan. Foto diakses lewat URL bertanda tangan yang berlaku 24 jam, dan orang tua hanya bisa membuka foto anaknya. Foto lama yang masih tersimpan langsung di database bisa dipindahkan lewat tombol di **Pengaturan**. Pembaruan realtime hanya memuat ulang tabel yang berubah.
+
+## Kartu ID siswa
+
+Buka **Data Siswa → tab Kartu ID**. Kartu juga bisa dibuka per siswa lewat tombol **Kartu** di tabel dan **Kartu ID** di profil siswa. Tidak perlu migrasi database.
+
+**Isi kartu**
+
+| Sisi | Isi |
+|---|---|
+| Depan | Logo dan nama sekolah, foto siswa (kembali ke inisial bila foto kosong atau gagal dimuat), nama, kelas, NIS, NISN, tahun ajaran |
+| Belakang | Kode QR berisi NIS, tempat/tanggal lahir, jenis kelamin, golongan darah, alamat, kontak wali (tiga yang terakhir bisa dimatikan), keterangan bila kartu ditemukan (alamat dan telepon sekolah), nama kepala sekolah dengan ruang tanda tangan |
+
+Data diambil dari data siswa dan *Pengaturan > Umum* (logo, nama sekolah, tahun ajaran, kepala sekolah, alamat, telepon). Karena itu isi lengkap lebih dulu bila ingin sisi belakang terisi penuh. Nama panjang mengecil otomatis dan membungkus hingga tiga baris.
+
+**Tampilan:** enam pilihan warna, orientasi potret atau lanskap, pratinjau depan atau belakang, dan pilihan data di sisi belakang. Pilihan disimpan per perangkat (`localStorage`, kunci `sh.idcard`). Pencarian, saringan kelas, dan saringan **Belum ada foto** memudahkan memeriksa kelengkapan sebelum mencetak. Tombol cetak berbunyi *Cetak semua* atau *Cetak terpilih* sesuai pilihan.
+
+**Mencetak** (hanya admin dan pengurus; peran lain bisa melihat pratinjau):
+
+| Media | Hasil |
+|---|---|
+| Kertas A4 (potong manual) | Potret 9 kartu per lembar (3 x 3), lanskap 10 kartu (2 x 5), dengan garis potong tipis. Cocok untuk dilaminasi |
+| Printer kartu PVC (CR80) | Satu kartu per halaman seukuran kartu (54 x 85,6 mm), untuk printer kartu (Evolis, Zebra, HiTi, dan sejenisnya) |
+
+Sisi yang dicetak: depan dan belakang, depan saja, atau belakang saja. Pada A4, sisi belakang **sudah dicerminkan** agar pas dengan sisi depan saat dicetak bolak-balik (pilih *dua sisi, balik pada sisi panjang*). Siswa tanpa foto bisa dilewati otomatis (bawaan: dilewati). Setiap pencetakan dicatat di *Aktivitas*.
+
+Pengaturan di jendela cetak peramban: skala **100%**, margin **Tidak ada**, aktifkan **Grafik latar belakang**. Hasil bisa disimpan sebagai PDF untuk dikirim ke percetakan.
+
+**Catatan teknis**
+
+- Kode QR dibuat oleh `idcard.js` sendiri (mode byte, koreksi kesalahan M, versi 1 sampai 6) tanpa pustaka luar. Isinya hanya NIS, tanpa data pribadi lain, sehingga bisa dipakai untuk pemindaian absensi di kemudian hari. Pembuat QR sudah diuji terbaca pemindai untuk semua versi.
+- Ukuran kartu memakai satuan milimeter yang diturunkan dari lebar kartu (`cqw`), jadi desain yang sama tampil identik di layar dan di kertas. Warna kartu sengaja tetap (tidak mengikuti tema terang/gelap) karena kartu adalah media cetak.
+- Semua kelas CSS internal kartu berawalan `ic-` agar tidak bentrok dengan kelas lain (`style.css` sudah memakai `.hd`, `.kv`, `.pg`, dan `.fr` untuk profil siswa).
+- Foto kartu diambil dari URL bertanda tangan Supabase Storage yang sama dengan profil. Bila foto tidak tampil di kartu, jalankan *Pengaturan > Data > Tes tampilan foto*.
+- Format foto tersimpan persegi (320 x 320 px) dan ditampilkan dengan rasio 4:5, sehingga sedikit bagian samping terpotong. Gunakan foto dengan wajah di tengah.
 
 ## Uji keamanan
 
