@@ -3,7 +3,7 @@
    $, esc, rp, fd, today, toast, logA, ico, sis, saldo, total, kelasList, csv, WA_TAB, WA_IUR. */
 (() => {
   'use strict';
-  const VER = '2.4.1';
+  const VER = '2.5.0';
   const adm = () => Data.role == 'admin';
   const ROLE = { admin: 'Admin', pengurus: 'Pengurus', viewer: 'Hanya lihat', ortu: 'Orang tua', pending: 'Menunggu' };
   /* Koleksi data yang dapat dihapus. DEP = ikut terhapus bila data siswa dihapus. */
