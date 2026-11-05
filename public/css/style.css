@@ -219,7 +219,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .kpi{display:flex;align-items:center;gap:14px;transition:transform .2s,border-color .2s}.kpi:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--pr) 35%,transparent)}
 .kpi .kb{min-width:0}.kpi .big{font-size:22px;white-space:nowrap}.kpi .lab{font-size:12.5px}
 .ki{flex:none;width:46px;height:46px;border-radius:13px;display:grid;place-items:center;background:color-mix(in srgb,var(--pr) 14%,transparent);color:var(--pr)}
-.ki.a{background:color-mix(in srgb,var(--ac) 15%,transparent);color:var(--ac)}.ki.b{background:color-mix(in srgb,var(--inf) 16%,transparent);color:var(--inf)}.ki.c{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.ki.a{background:color-mix(in srgb,var(--ac) 15%,transparent);color:var(--ac)}.ki.b{background:color-mix(in srgb,var(--inf) 16%,transparent);color:var(--inf)}.ki.c{background:color-mix(in srgb,var(--ok) calc(var(--tn) * .55),transparent);color:var(--ok)}
 .ki svg{width:22px;height:22px}
 .chart{width:100%;height:auto;display:block;overflow:visible}.chart .gl{stroke:var(--br);stroke-width:1}
 .ct{fill:var(--mu);font-size:11px}.dv{fill:var(--tx);font-size:21px;font-weight:800}.trk{stroke:var(--w3)}
@@ -412,3 +412,35 @@ html.tfx *,html.tfx *::before,html.tfx *::after{transition:background-color .3s 
   #auth .afi input{height:52px;font-size:16px}
   .thf{background:var(--lgb);color:var(--lgt);border-color:transparent}
 }
+
+/* ===== Impor Excel / CSV ===== */
+dialog.imp{width:min(880px,96vw)}
+.drz{display:grid;place-items:center;gap:6px;text-align:center;padding:30px 16px;margin:14px 0 4px;border:2px dashed var(--ibr);border-radius:16px;background:var(--w1);cursor:pointer;color:var(--tx)}
+.drz svg{color:var(--pr)}.drz:hover,.drz.on{border-color:var(--pr);background:color-mix(in srgb,var(--pr) 8%,transparent)}
+.imd{margin:12px 0 0;font-size:13px}.imd summary{cursor:pointer;color:var(--mu);font-weight:600}.imd p{margin:8px 0 0}
+.imf{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-radius:12px;background:var(--w2);font-size:13.5px;margin:0 0 12px;word-break:break-all}
+.imm2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 14px}
+.imm{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:0 14px}
+.imm label,.imm2 label{margin-bottom:12px}.rq{color:var(--er);font-weight:700}
+.imr{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:6px 0 4px;font-size:13.5px}.imr .chk{margin:0}
+.nt.ok{border-color:color-mix(in srgb,var(--ok) 40%,var(--br));background:color-mix(in srgb,var(--ok) 9%,transparent)}
+.ims{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.ibd{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;line-height:1.4;text-align:center;white-space:nowrap}
+.ibd.new{background:color-mix(in srgb,var(--ok) calc(var(--tn) * .55),transparent);color:var(--ok)}
+.ibd.update{background:color-mix(in srgb,var(--inf) calc(var(--tn) * .55),transparent);color:var(--inf)}
+.ibd.skip{background:var(--w3);color:var(--mu)}
+.ibd.error{background:color-mix(in srgb,var(--er) calc(var(--tn) * .55),transparent);color:var(--er)}
+.ibd.warn{background:color-mix(in srgb,var(--ac) calc(var(--tn) * .55),transparent);color:var(--ac)}
+.ipl{border:1px solid var(--br);border-radius:12px;max-height:min(44vh,380px);overflow:auto}
+.ipr{display:grid;grid-template-columns:48px 76px minmax(0,1fr);gap:10px;align-items:start;padding:9px 12px;border-bottom:1px solid var(--ln);font-size:13px}
+.ipr:last-child{border-bottom:0}.ipr .ibd{justify-self:start}.ipm{min-width:0;word-break:break-word}
+.ipm small{display:block;margin-top:2px;font-size:12px;line-height:1.4}.ipm small.er{color:var(--er)}.ipm small.mu{color:var(--mu)}.ipm small.wn{color:var(--ac)}
+.imt{background:transparent}
+@media(max-width:860px){
+  dialog.imp .acts{flex-wrap:wrap;gap:8px}dialog.imp .acts .sp{display:none}
+  dialog.imp .acts button{flex:1 1 calc(50% - 4px);min-width:0}
+  dialog.imp .acts .p{order:-1;flex-basis:100%}
+  .ipr{grid-template-columns:40px 70px minmax(0,1fr);gap:8px;padding:9px 10px}
+}
+
+.kv b.ok{color:var(--ok)}.kv b.er{color:var(--er)}
