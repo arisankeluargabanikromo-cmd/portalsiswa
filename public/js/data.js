@@ -51,9 +51,9 @@
     return o;
   }
   // Kolom tambahan (logo, kepsek, alamat, telp) hanya dikirim bila migrasi 007 sudah dijalankan; bila tidak, simpan tetap berhasil.
-  let cfgExt = false;
+  let cfgExt = false, cfgIns = false, cfgNip = false;   // cfgIns: migrasi 008 (instansi), cfgNip: migrasi 009 (NIP kepala sekolah)
   const cfgRow = c => Object.assign({ id: 1, sekolah: c.sekolah || '', tahun: c.tahun || '', walikelas: c.walikelas || '', iuran: Number(c.iuran) || 0, wa_tab: c.watab || '', wa_iuran: c.waiuran || '' },
-    cfgExt ? { logo: c.logo || '', kepsek: c.kepsek || '', alamat: c.alamat || '', telp: c.telp || '' } : {});
+    cfgExt ? { logo: c.logo || '', kepsek: c.kepsek || '', alamat: c.alamat || '', telp: c.telp || '' } : {}, cfgIns ? { instansi: c.instansi || '' } : {}, cfgNip ? { kepsek_nip: c.kepsek_nip || '' } : {});
 
   // Hitung perubahan sekarang juga (sinkron), kirim ke server lewat antrian
   function plan(db) {
@@ -154,9 +154,11 @@
       const { data } = await sb.from('pengaturan').select('*').eq('id', 1).maybeSingle();
       const c = data || {};
       cfgExt = !!data && 'logo' in data; Data.cfgExt = cfgExt;
+      cfgIns = !!data && 'instansi' in data; Data.cfgIns = cfgIns;
+      cfgNip = !!data && 'kepsek_nip' in data; Data.cfgNip = cfgNip;
       db.cfg = { sekolah: c.sekolah || 'Nama Sekolah', tahun: c.tahun || '', walikelas: c.walikelas || '',
         iuran: Number(c.iuran) || 0, watab: c.wa_tab || '', waiuran: c.wa_iuran || '',
-        logo: c.logo || '', kepsek: c.kepsek || '', alamat: c.alamat || '', telp: c.telp || '' };
+        logo: c.logo || '', kepsek: c.kepsek || '', alamat: c.alamat || '', telp: c.telp || '', instansi: c.instansi || '', kepsek_nip: c.kepsek_nip || '' };
       snapCfg = JSON.stringify(cfgRow(db.cfg));
     },
     // Muat semua tabel secara paralel
@@ -250,6 +252,8 @@
 
     // Logo sekolah (bucket publik 'logo-sekolah', migrasi 007)
     cfgExt: false,
+    cfgIns: false,
+    cfgNip: false,
     logoUrl(p) { return p ? sb.storage.from('logo-sekolah').getPublicUrl(p).data.publicUrl : ''; },
     async uploadLogo(blob) {
       const path = 'logo-' + Date.now() + '.png';

@@ -3,7 +3,7 @@
    $, esc, rp, fd, today, toast, logA, ico, sis, saldo, total, kelasList, csv, WA_TAB, WA_IUR. */
 (() => {
   'use strict';
-  const VER = '2.5.0';
+  const VER = '2.5.5';
   const adm = () => Data.role == 'admin';
   const ROLE = { admin: 'Admin', pengurus: 'Pengurus', viewer: 'Hanya lihat', ortu: 'Orang tua', pending: 'Menunggu' };
   /* Koleksi data yang dapat dihapus. DEP = ikut terhapus bila data siswa dihapus. */
@@ -72,8 +72,10 @@
     h += sec('umum', head('umum', 'Umum', 'Identitas sekolah yang tampil di menu, layar masuk, dan cetakan.')
       + `<div class='lgr'><div class='lgp' id='lgp'>${Brand.tile(88)}</div><div class='lgi'><b>Logo sekolah</b><p class='lab'>PNG, JPG, atau WebP. Otomatis diperkecil. Tampil di menu samping, layar masuk, ikon tab, dan cetakan.</p>`
       + (a ? `<div class='pbar'><button type='button' class='p' onclick='A.logo()' ${ext ? '' : 'disabled'}>Unggah logo</button><button type='button' class='d' id='lgd' onclick='A.logoDel()' ${c.logo ? '' : 'hidden'}>Hapus</button></div>` : '')
+      + (a && ext && !Data.cfgNip ? note('NIP kepala sekolah pada tanda tangan kartu ID butuh migrasi <b>009</b> di Supabase. Lihat README, bagian Kartu ID siswa.') : '')
+      + (a && ext && !Data.cfgIns ? note('Kop instansi pada kartu ID butuh migrasi <b>008</b> di Supabase. Lihat README, bagian Kartu ID siswa.') : '')
       + (a && !ext ? note('Fitur logo dan kolom tambahan butuh migrasi <b>007</b> di Supabase. Lihat README, bagian Pengaturan.') : '') + `</div></div>`
-      + `<div class='fg'>${inp('sekolah', 'Nama sekolah')}${inp('tahun', 'Tahun ajaran', { ph: '2026/2027' })}${inp('walikelas', 'Wali kelas')}${ext ? inp('kepsek', 'Kepala sekolah') + inp('telp', 'Telepon', { t: 'tel' }) + `<label>Alamat<textarea data-cfg='alamat' rows='2' ${a ? '' : 'disabled'}>${esc(c.alamat)}</textarea></label>` : ''}</div>`);
+      + `<div class='fg'>${inp('sekolah', 'Nama sekolah')}${Data.cfgIns ? inp('instansi', 'Instansi induk (kop kartu ID)', { ph: 'PEMERINTAH KABUPATEN MADIUN' }) : ''}${inp('tahun', 'Tahun ajaran', { ph: '2026/2027' })}${inp('walikelas', 'Wali kelas')}${ext ? inp('kepsek', 'Kepala sekolah') + (Data.cfgNip ? inp('kepsek_nip', 'NIP kepala sekolah', { ph: '196501011990031001' }) : '') + inp('telp', 'Telepon', { t: 'tel' }) + `<label>Alamat<textarea data-cfg='alamat' rows='2' ${a ? '' : 'disabled'}>${esc(c.alamat)}</textarea></label>` : ''}</div>`);
 
     /* Keuangan */
     h += sec('keuangan', head('keuangan', 'Keuangan', 'Iuran kelas dan pesan pengingat untuk wali murid.')

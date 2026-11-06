@@ -135,17 +135,51 @@
   })();
   /*QR-END*/
 
+  /*C128-START*/
+  /* Code 128 (set B, dan set C untuk NIS angka agar lebih rapat). Keluaran: SVG satu path, tinggi 1 satuan */
+  const C128 = (() => {
+    const P = ('212222 222122 222221 121223 121322 131222 122213 122312 132212 221213 221312 231212 112232 122132 122231 113222 123122 123221 223211 221132 '
+      + '221231 213212 223112 312131 311222 321122 321221 312212 322112 322211 212123 212321 232121 111323 131123 131321 112313 132113 132311 211313 '
+      + '231113 231311 112133 112331 132131 113123 113321 133121 313121 211331 231131 213113 213311 213131 311123 311321 331121 312113 312311 332111 '
+      + '314111 221411 431111 111224 111422 121124 121421 141122 141221 112214 112412 122114 122411 142112 142211 241211 221114 413111 241112 134111 '
+      + '111242 121142 121241 114212 124112 124211 411212 421112 421211 212141 214121 412121 111143 111341 131141 114113 114311 411113 411311 113141 '
+      + '114131 311141 411131 211412 211214 211232 2331112').split(' ');
+    function codes(text) {
+      const t = String(text), out = [];
+      if (/^\d{2,}$/.test(t)) {
+        let i = 0;
+        if (t.length % 2) { out.push(104, t.charCodeAt(0) - 32, 99); i = 1 } else out.push(105);
+        for (; i < t.length; i += 2) out.push(+t.slice(i, i + 2));
+      } else {
+        out.push(104);
+        for (const ch of t) { const c = ch.charCodeAt(0); out.push(c >= 32 && c <= 126 ? c - 32 : 31) }
+      }
+      let sum = out[0]; for (let i = 1; i < out.length; i++) sum += out[i] * i;
+      out.push(sum % 103, 106);
+      return out;
+    }
+    function svg(text, q = 10) {
+      if (!String(text || '').trim()) return '';
+      let x = q, d = '';
+      codes(text).forEach(c => { const p = P[c]; for (let i = 0; i < p.length; i++) { const w = +p[i]; if (i % 2 == 0) d += `M${x} 0h${w}v1h-${w}z`; x += w } });
+      return `<svg viewBox="0 0 ${x + q} 1" preserveAspectRatio="none" shape-rendering="crispEdges" role="img" aria-label="Barcode NIS"><path d="${d}" fill="#000"/></svg>`;
+    }
+    return { codes, svg, P };
+  })();
+  /*C128-END*/
+
   /* ================= 2. Pilihan & kartu ================= */
   // Warna kartu = media cetak fisik, jadi sengaja tetap (tidak mengikuti tema terang/gelap aplikasi).
+  // g1 -> g2 -> g3: gradien (awal terang, tengah gelap, akhir cerah), rg: cincin foto dan garis gelombang
   const TEMA = {
-    teal: { n: 'Teal', a: '#0b6b67', b: '#17a69f', s: '#e3f3f2' },
-    biru: { n: 'Biru', a: '#16407f', b: '#2f78d6', s: '#e6eefa' },
-    merah: { n: 'Merah', a: '#8d1f2c', b: '#d2475a', s: '#fae8eb' },
-    hijau: { n: 'Hijau', a: '#1f6b3b', b: '#3bae67', s: '#e5f4ec' },
-    ungu: { n: 'Ungu', a: '#48319a', b: '#7b64e0', s: '#eeeafa' },
-    oranye: { n: 'Oranye', a: '#a14a05', b: '#ee8a1d', s: '#fcefde' }
+    teal: { n: 'Teal', g1: '#4fd8a4', g2: '#0a3560', g3: '#10b5b5', rg: '#2d8678' },
+    biru: { n: 'Biru', g1: '#5bb8ff', g2: '#0b2c66', g3: '#2f8be0', rg: '#2b6cb0' },
+    merah: { n: 'Merah', g1: '#ff8f7d', g2: '#5e1220', g3: '#d2475a', rg: '#a23444' },
+    hijau: { n: 'Hijau', g1: '#8be38f', g2: '#0c4a2b', g3: '#2fae6a', rg: '#2a7a4b' },
+    ungu: { n: 'Ungu', g1: '#a99bff', g2: '#2a1a6b', g3: '#7b64e0', rg: '#4b3aa8' },
+    oranye: { n: 'Oranye', g1: '#ffc15e', g2: '#6b2d03', g3: '#ee8a1d', rg: '#b3561a' }
   };
-  const LS = 'sh.idcard', DEF = { warna: 'teal', ori: 'por', tampak: 'depan', alamat: 1, gol: 1, wali: 0, mode: 'a4', sisi: 'duplex' };
+  const LS = 'sh.idcard3', DEF = { warna: 'teal', ori: 'lan', tampak: 'depan', alamat: 1, wali: 1, mode: 'a4', sisi: 'duplex' };
   const O = Object.assign({}, DEF);
   try { Object.assign(O, JSON.parse(localStorage.getItem(LS) || '{}')) } catch (e) { }
   if (!TEMA[O.warna]) O.warna = DEF.warna;
@@ -171,46 +205,82 @@
   const tier = (t, a, b, c) => { const n = String(t || '').length; return n > c ? 'ic-t4' : n > b ? 'ic-t3' : n > a ? 'ic-t2' : 'ic-t1' };
   const MARK = `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 17l20 9-20 9-20-9z"/><path d="M20 34v8c0 3 6 6 12 6s12-3 12-6v-8l-12 5.5z"/><path d="M52 26v14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>`;
   const logo = () => { const u = Brand.url(); return u ? `<img src="${esc(u)}" alt="" onerror="IDC.bad(this)">` : MARK };
-  const style = () => { const t = TEMA[O.warna]; return `--a:${t.a};--b:${t.b};--s:${t.s}` };
-  const row = (l, v) => v ? `<div class="ic-r"><span>${l}</span><b>${esc(v)}</b></div>` : '';
+  const style = () => { const t = TEMA[O.warna]; return `--g1:${t.g1};--g2:${t.g2};--g3:${t.g3};--rg:${t.rg}` };
+  const tglS = d => d ? new Date(d + 'T00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  // garis gelombang dekoratif (seperti contoh) di area putih kartu
+  const WAVES = (() => {
+    let d = '';
+    for (let k = 0; k < 14; k++) { const y = 3 + k * 2.4, a = 3 + k * .45, o = k * .9; d += `<path d="M0 ${(y + 6).toFixed(1)} C ${(26 + o).toFixed(1)} ${(y - a).toFixed(1)}, ${(54 - o).toFixed(1)} ${(y + a + 8).toFixed(1)}, 84 ${(y + 3).toFixed(1)} S ${(134 + o).toFixed(1)} ${(y - a - 2).toFixed(1)}, 160 ${(y + 4).toFixed(1)}"/>` }
+    return `<svg class="ic-wv" viewBox="0 0 160 44" preserveAspectRatio="none" aria-hidden="true">${d}</svg>`;
+  })();
+  // baris label : nilai. Baris tanpa nilai dilewati. it = [label, nilai, kelas dd opsional]
+  const rows = (it, cls) => `<dl class="ic-rows ${cls || ''}">${it.filter(i => i && String(i[1] || '').trim()).map(i => `<div><dt>${i[0]}</dt><i>:</i><dd class="${i[2] || ''}">${esc(i[1])}</dd></div>`).join('')}</dl>`;
+  // Tingkat ukuran huruf agar teks panjang tetap muat (teks boleh membungkus, tidak pernah dipotong)
+  const sz = (t, a, b) => { const n = String(t || '').length; return n > b ? 'ic-s3' : n > a ? 'ic-s2' : '' };
+
+  // Kop yang sama di depan dan belakang: logo, instansi induk, nama sekolah, alamat sekolah (semua rata tengah)
+  function kop(extra) {
+    const c = db.cfg, ins = String(c.instansi || '').trim(), sk = String(c.sekolah || '').trim(), al = String(c.alamat || '').trim();
+    return `<div class="ic-hdc"><div class="ic-kopb"><span class="ic-lg">${logo()}</span><div class="ic-bn">`
+      + (ins ? `<small class="${sz(ins, 34, 40)}">${esc(ins)}</small>` : '')
+      + `<b class="${tier(sk, 24, 34, 50)}">${esc(sk)}</b>`
+      + (al ? `<em class="${sz(al, 52, 72)}">${esc(al)}</em>` : '') + `</div></div>${extra || ''}</div>`;
+  }
+
+  // Ukuran huruf baris data depan dipilih otomatis supaya semua teks muat tanpa dipotong
+  const FITC = { lan: { w: 30.6, f: 2.62, lim: 6.1 }, por: { w: 28.6, f: 2.4, lim: 5.0 } };
+  function fitCls(items) {
+    const g = FITC[O.ori], list = items.filter(i => i && String(i[1] || '').trim());
+    for (const sc of [1, .92, .85, .78, .72]) {
+      const cpl = Math.max(8, Math.floor(g.w / (g.f * sc * .6)));
+      const n = list.reduce((t, i) => t + Math.max(1, Math.ceil(String(i[1]).trim().length / (i[2] && i[2].includes('ic-nm') ? cpl * .92 : cpl))), 0);
+      if (n * sc <= g.lim) return 'ic-f' + Math.round(sc * 100);
+    }
+    return 'ic-f72';
+  }
 
   function front(s, lazy) {
-    const ph = Data.url(s.foto), nm = String(s.nama || '').trim(), sk = db.cfg.sekolah || '', ta = db.cfg.tahun || '';
+    const c = db.cfg, nm = String(s.nama || '').trim(), sk = c.sekolah || '', ta = c.tahun || '', ph = Data.url(s.foto);
     const ini = esc(nm.split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || '?');
     const fb = `<span style="background:${avc(nm)}">${ini}</span>`;     // cadangan bila foto kosong atau gagal dimuat
-    return `<div class="idf ic-fr">
-<div class="ic-hd"><span class="ic-lg">${logo()}</span><div class="ic-sk"><small>KARTU PELAJAR</small><b class="${tier(sk, 24, 36, 52)}">${esc(sk)}</b></div></div>
+    const lahir = [s.tl, tglS(s.tgl)].filter(Boolean).join(', ');
+    const items = [['Nama', nm, 'ic-nm'], ['NIS', s.nis], ['Jenis Kelamin', s.jk], ['Lahir', lahir], O.alamat ? ['Alamat', s.alamat] : null];
+    return `<div class="idf ic-fr">${WAVES}<div class="ic-hd"></div>${kop('<div class="ic-ttl">KARTU PELAJAR</div>')}
 <div class="ic-ph">${ph ? `<img src="${esc(ph)}" alt="Foto ${esc(nm)}"${lazy ? ' loading="lazy" decoding="async"' : ''} data-fb="${encodeURIComponent(fb)}" onerror="this.outerHTML=decodeURIComponent(this.dataset.fb)">` : fb}</div>
-<div class="ic-nm ${tier(nm, 18, 26, 36)}"><span>${esc(nm)}</span></div>
-<div class="ic-kl"><span>Kelas ${esc(s.kelas)}</span></div>
-<dl class="ic-kv"><div><dt>NIS</dt><dd>${esc(s.nis)}</dd></div>${s.nisn ? `<div><dt>NISN</dt><dd>${esc(s.nisn)}</dd></div>` : ''}</dl>
+<div class="ic-bc">${C128.svg(String(s.nis || ''), 0)}</div>
+${rows(items, fitCls(items))}
 <div class="ic-ft">${ta ? 'Tahun Ajaran ' + esc(ta) : esc(sk)}</div></div>`;
   }
 
+  // Ketentuan penggunaan kartu (rata tengah, kalimat singkat)
+  const KETENTUAN = ['Kartu wajib dibawa selama berada di lingkungan sekolah.', 'Kartu tidak boleh dipinjamkan atau dipindahtangankan.',
+    'Bila hilang, rusak, atau ditemukan, segera hubungi atau kembalikan ke sekolah.'];
+
   function back(s) {
-    const c = db.cfg, sk = c.sekolah || '';
-    const lahir = [s.tl, tgl(s.tgl)].filter(Boolean).join(', ');
-    const rows = row('Lahir', lahir) + row('Kelamin', s.jk) + (O.gol ? row('Gol. darah', s.gol) : '')
-      + (O.alamat ? row('Alamat', s.alamat) : '') + (O.wali ? row('Kontak', s.hp) : '');
-    const kontak = [c.alamat, c.telp ? 'Telp. ' + c.telp : ''].filter(Boolean).join(' · ');
-    return `<div class="idf ic-bk">
-<div class="ic-bt"><span class="ic-lg">${logo()}</span><b>${esc(sk)}</b></div>
-<div class="ic-qr"><div>${QR.svg(String(s.nis || ''))}</div><small>NIS ${esc(s.nis)}</small></div>
-<div class="ic-bd"><div class="ic-ds">${rows}</div>
-<p class="ic-nt">Kartu ini milik ${esc(sk)}. Bila ditemukan, mohon dikembalikan ke sekolah${kontak ? ': ' + esc(kontak) : ''}.</p></div>
-<div class="ic-sg"><small>Kepala Sekolah</small><i></i><b>${esc(c.kepsek || '...............................')}</b></div></div>`;
+    const c = db.cfg, hp = String(s.hp || '').trim(), kn = String(c.kepsek || '').trim(), np = String(c.kepsek_nip || '').trim();
+    // dua kode QR sejajar: NIS, dan WhatsApp wali (tautan wa.me dari nomor kontak wali)
+    const qc = (svg, lab, val) => `<div class="ic-qc"><div class="ic-qb">${svg}</div><div class="ic-cp"><small>${lab}</small><b>${esc(val)}</b></div></div>`;
+    const wn = typeof waNum == 'function' ? waNum(hp) : '', wali = !O.wali || !hp ? '' : wn ? qc(QR.svg('https://wa.me/' + wn), 'WhatsApp Wali', hp)
+      : `<div class="ic-qc ic-nq"><div class="ic-cp"><small>Kontak Wali</small><b>${esc(hp)}</b></div></div>`;
+    // tanda tangan: nama dan NIP kepala sekolah (bila kosong, diberi garis titik agar bisa diisi tangan)
+    const sgn = `<div class="ic-sgn"><small>Kepala Sekolah,</small><i></i><b class="${sz(kn, 26, 34)}">${esc(kn || '...............................')}</b>`
+      + (np ? `<span>NIP.&nbsp;${esc(np)}</span>` : kn ? '' : '<span>NIP.&nbsp;..........................</span>') + '</div>';
+    return `<div class="idf ic-bk">${WAVES}<div class="ic-hd"></div>${kop()}
+<div class="ic-bb">${qc(QR.svg(String(s.nis || '')), 'NIS', s.nis)}${wali}</div>
+<div class="ic-fl"><div class="ic-tc"><h4>Ketentuan Penggunaan Kartu</h4>${KETENTUAN.map(t => `<p>${t}</p>`).join('')}</div>${sgn}</div>
+<div class="ic-ft"></div></div>`;
   }
 
   const card = (s, side, lazy) => `<div class="idc ${O.ori}" style="${style()}">${side == 'belakang' ? back(s) : front(s, lazy)}</div>`;
 
   /* ================= 3. Galeri (tab Kartu ID) ================= */
-  const swatch = k => `<button type="button" style="--c:${TEMA[k].a}" aria-pressed="${O.warna == k}" aria-label="Warna ${TEMA[k].n}" title="${TEMA[k].n}" onclick="IDC.set('warna','${k}')"></button>`;
+  const swatch = k => `<button type="button" style="--c:linear-gradient(135deg,${TEMA[k].g1},${TEMA[k].g2} 55%,${TEMA[k].g3})" aria-pressed="${O.warna == k}" aria-label="Warna ${TEMA[k].n}" title="${TEMA[k].n}" onclick="IDC.set('warna','${k}')"></button>`;
   const seg = (k, items) => `<div class="idseg" role="group">${items.map(i => `<button type="button" class="${O[k] == i[0] ? 'on' : ''}" aria-pressed="${O[k] == i[0]}" onclick="IDC.set('${k}','${i[0]}')">${i[1]}</button>`).join('')}</div>`;
   const chk = (k, l) => `<label class="idck"><input type="checkbox" ${O[k] ? 'checked' : ''} onchange="IDC.set('${k}',this.checked?1:0)">${l}</label>`;
   const opts = () => `<div><span class="lab">Warna kartu</span><div class="idsw">${Object.keys(TEMA).map(swatch).join('')}</div></div>
 <div><span class="lab">Orientasi</span>${seg('ori', [['por', 'Potret'], ['lan', 'Lanskap']])}</div>
 <div><span class="lab">Pratinjau sisi</span>${seg('tampak', [['depan', 'Depan'], ['belakang', 'Belakang']])}</div>
-<div><span class="lab">Sisi belakang memuat</span><div class="idcks">${chk('alamat', 'Alamat')}${chk('gol', 'Gol. darah')}${chk('wali', 'Kontak wali')}</div></div>`;
+<div><span class="lab">Data tambahan</span><div class="idcks">${chk('alamat', 'Alamat siswa (depan)')}${chk('wali', 'WhatsApp wali (belakang)')}</div></div>`;
 
   const optHead = () => `${TEMA[O.warna].n} · ${O.ori == 'por' ? 'Potret' : 'Lanskap'} · ${O.tampak == 'depan' ? 'Depan' : 'Belakang'}`;
   const tile = s => {

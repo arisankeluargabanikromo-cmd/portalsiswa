@@ -90,6 +90,7 @@
     if (cur == 'dashboard' || cur == 'portal') return [sk, db.cfg.tahun ? 'Tahun ajaran ' + db.cfg.tahun : ''];
     if (cur == 'menu') return ['Akun', ''];
     if (cur == 'profil') return [s ? s.nama : 'Profil siswa', s ? 'Kelas ' + s.kelas : ''];
+    if (cur == 'tambah') return ['Tambah siswa', ''];
     if (cur == 'ubah') return ['Ubah profil', s ? s.nama : ''];
     if (cur == 'pengaturan') return ['Pengaturan', ''];
     return [nn(cur), ''];
@@ -110,7 +111,8 @@
     if (window.Theme) Theme.meta();
   }
   function goBack() {
-    if (cur == 'ubah') location.hash = 'profil-' + PID;
+    if (cur == 'tambah') location.hash = 'siswa';
+    else if (cur == 'ubah') location.hash = 'profil-' + PID;
     else if (hops > 0) history.back();
     else location.hash = cur == 'pengaturan' ? 'menu' : homeId();
   }
