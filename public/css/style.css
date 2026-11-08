@@ -381,6 +381,7 @@ html.tfx *,html.tfx *::before,html.tfx *::after{transition:background-color .3s 
 .abl .bt.has{border:0;background:#fff}
 .abki{font-size:12.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--abx2);margin-bottom:6px;overflow-wrap:anywhere}
 .abks{margin:0;font-size:25px;line-height:1.22;font-weight:800;letter-spacing:.01em;text-transform:uppercase;overflow-wrap:anywhere}
+.abk.fin{animation:afade .35s ease both}@keyframes afade{from{opacity:0}to{opacity:1}}@media(prefers-reduced-motion:reduce){.abk.fin{animation:none}}
 .abks.app{text-transform:none;letter-spacing:-.01em}
 .abka{margin:8px 0 0;font-size:13px;line-height:1.5;color:var(--abx2);overflow-wrap:anywhere}
 .abru{display:block;width:100%;height:5px;margin-top:18px;border-top:2px solid var(--abx);border-bottom:1px solid var(--abx);opacity:.55}

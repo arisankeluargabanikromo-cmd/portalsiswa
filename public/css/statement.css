@@ -72,7 +72,7 @@
 .mtx button.cell.in{border-color:color-mix(in srgb,var(--ok) 45%,transparent);background:color-mix(in srgb,var(--ok) 12%,transparent)}
 
 /* ---- Toolbar halaman keuangan ---- */
-body[data-v=tabungan] .bar,body[data-v=kas] .bar,body[data-v=iuran] .bar,body[data-v=pengingat] .bar,body[data-v=laporan] .pbar{padding:10px;border:1px solid var(--br);border-radius:14px;background:var(--sf)}
+body[data-v=tabungan] .bar,body[data-v=kas] .bar,body[data-v=iuran] .bar,body[data-v=pengingat] .bar,body[data-v=laporan] .pbar,body[data-v=siswa] .bar,body[data-v=absensi] .bar,body[data-v=absensi] .pbar{padding:10px;border:1px solid var(--br);border-radius:14px;background:var(--sf)}
 .stbtns{display:contents}
 .bar .stmon{display:inline-flex;align-items:center;gap:4px}
 .bar .stmon b{min-width:128px;text-align:center}
@@ -312,3 +312,104 @@ body[data-v=tabungan] .bar input[type=search]{min-width:150px}
 .pp-tb td[data-k=ref]{white-space:nowrap}
 .pp-tb td[data-k=ref] .rf{word-break:normal;white-space:nowrap}
 @media screen and (max-width:640px){.pp-sheet{padding:0;border:0;background:none;overflow:visible}.pp-sheet .pp{padding:16px 12px}}
+
+/* Laporan absensi: matriks harian */
+.pp-tb.pp-ab th,.pp-tb.pp-ab td{padding-left:2px;padding-right:2px;text-align:center}
+.pp-tb.pp-ab td.l,.pp-tb.pp-ab th.l{text-align:left;padding-left:5px;white-space:nowrap}
+.pp-tb.pp-ab td.ab-a{font-weight:700}
+@media screen and (max-width:640px){
+  .pp-tw{overflow-x:auto}
+  .pp-tb.pp-ab{display:table!important;min-width:560px}
+  .pp-tb.pp-ab thead{display:table-header-group!important}
+  .pp-tb.pp-ab tbody{display:table-row-group!important}
+  .pp-tb.pp-ab tr{display:table-row!important;padding:0}
+  .pp-tb.pp-ab td{display:table-cell!important;padding:4px 3px;font-size:10px;text-align:center}
+  .pp-tb.pp-ab td.l{text-align:left;flex:none}
+  .pp-tb.pp-ab td[data-k=no]{display:table-cell!important}
+  .pp-tb.pp-ab td::before{content:none!important}
+}
+@media print{.pp-tb.pp-ab{font-size:7.5pt}.pp-tb.pp-ab td,.pp-tb.pp-ab th{padding:3pt 1pt!important;font-size:7.5pt}.pp-tb.pp-ab td.l{padding-left:3pt!important}}
+
+/* Absensi: radio berwarna per status, tombol Batal kecil, strip ringkasan dengan jarak rapi */
+body[data-v=absensi] .stsum{margin:0 0 14px}
+body[data-v=absensi] .stcard td input[type=radio]{width:18px;height:18px;cursor:pointer}
+body[data-v=absensi] .ra-H{accent-color:var(--ok)}
+body[data-v=absensi] .ra-S{accent-color:var(--inf)}
+body[data-v=absensi] .ra-I{accent-color:var(--ac)}
+body[data-v=absensi] .ra-A{accent-color:var(--er)}
+body[data-v=absensi] .stcard td button.s{padding:4px 10px;font-size:12px}
+body[data-v=absensi] .stcard th,body[data-v=absensi] .stcard td{text-align:center}
+body[data-v=absensi] .stcard th:first-child,body[data-v=absensi] .stcard td:first-child,body[data-v=absensi] .stcard th:last-child,body[data-v=absensi] .stcard td:last-child{text-align:left}
+body[data-v=absensi] .stcard tbody tr:hover td{background:var(--w1)}
+
+/* ===== Data Siswa: kartu tabel rapi ===== */
+body[data-v=siswa] .stsum{margin:0 0 14px}
+.sdt .empty{margin:18px}
+.sdt table{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}
+.sdt th{padding:11px 14px;background:color-mix(in srgb,var(--pr) 10%,var(--sf2));color:var(--tx);font-size:12.5px;font-weight:700;border-bottom:1px solid var(--bd2)}
+.sdt td{padding:11px 14px;font-size:13.5px;vertical-align:middle;border-bottom:1px solid var(--ln)}
+.sdt tbody tr:last-child td,.sdt table tr:last-child td{border-bottom:0}
+.sdt tr:hover td{background:var(--w1)}
+.sdt a.sdn{gap:12px;min-width:200px}
+.sdt .sdt2{display:flex;flex-direction:column;gap:1px;min-width:0}
+.sdt .sdt2 b{font-size:14px;line-height:1.3}
+.sdt .sdt2 small{font-size:12px;color:var(--mu);line-height:1.3}
+.sdt .nis{color:var(--mu);letter-spacing:.01em}
+.sdt .tag.kls{background:color-mix(in srgb,var(--pr) 12%,transparent);border-color:color-mix(in srgb,var(--pr) 30%,transparent);color:var(--pr);padding:2px 10px}
+.sdt .sdl{font-weight:700}.sdt .sdl.pos{color:var(--ok)}.sdt .sdl.nol{color:var(--mu);font-weight:600}
+.sdt .sact{display:inline-flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap}
+.sdt .sact .btn,.sdt .sact button{padding:5px 12px;font-size:12.5px}
+.sdt td.r{white-space:nowrap}
+@media screen and (max-width:860px){
+  .sdt{padding:2px 14px}
+  .sdt th{display:none}
+  .sdt a.sdn{min-width:0}
+  .sdt .sact{justify-content:flex-end;flex-wrap:wrap}
+  .sdt .stn{padding:12px 0 8px}
+  .abs td.act:empty{display:none}
+  .abs td.act:not(:empty){grid-column:1/-1;justify-self:end}
+}
+
+/* ===== Profil siswa ===== */
+.pfcs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pfc{display:inline-flex;align-items:center;padding:3px 11px;border-radius:99px;border:1px solid var(--br);background:var(--w2);color:var(--mu);font-size:12.5px;font-weight:600}
+.pfc.jb{background:color-mix(in srgb,var(--pr) 13%,transparent);border-color:color-mix(in srgb,var(--pr) 32%,transparent);color:var(--pr)}
+.pfk{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--br)}
+.pfk>div{padding:14px 22px;border-left:1px solid var(--br);min-width:0}
+.pfk>div:first-child{border-left:0}
+.pfk span{display:block;font-size:12.5px;color:var(--mu)}
+.pfk b{display:block;margin-top:3px;font-size:20px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.pfk small{display:block;margin-top:2px;font-size:12px;color:var(--mu)}
+.pfk .hero b{color:var(--pr)}.pfk .in b{color:var(--ok)}.pfk .out b{color:var(--er)}
+.tabs .pfct{display:inline-block;margin-left:7px;min-width:20px;padding:0 6px;border-radius:99px;background:var(--w3);color:var(--mu);font-size:11.5px;font-weight:700;line-height:19px;text-align:center}
+.tabs button.on .pfct{background:color-mix(in srgb,var(--pr) 16%,transparent);color:var(--pr)}
+.pfs h3{margin:0 0 6px;font-size:15px}
+.pfbio{margin:0 0 8px;color:var(--tx);line-height:1.55}
+.pfg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;align-items:start}
+.pfg .pfs:first-child{grid-row:span 2}
+.pfs .kv .pfn{font-weight:400;opacity:.7}
+.pfs .kv b{max-width:62%;overflow-wrap:anywhere}
+.pfcomp{margin-bottom:12px;align-items:center}
+.pfcomp button{flex:1;text-align:left;border-radius:99px;color:var(--mu)}
+.pfa{display:flex;flex-direction:column}
+.pfi{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--ln)}
+.pfi:last-child{border-bottom:0;padding-bottom:2px}
+.pfb{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-style:normal}
+.pfb svg{width:19px;height:19px}
+.pfb.setor{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.pfb.tarik{background:color-mix(in srgb,var(--er) 13%,transparent);color:var(--er)}
+.pft{flex:1;min-width:0}.pft b{display:block;font-size:14px}.pft .lab{display:block;margin-top:1px}
+.pfm{font-size:16px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pfr{margin-bottom:10px}
+.pfrh{display:flex;justify-content:space-between;font-size:13.5px}
+.pfrh span{color:var(--mu)}
+.pfr .meter{margin:5px 0 0}
+@media screen and (max-width:860px){
+  .pfk{grid-template-columns:1fr 1fr}
+  .pfk>div{padding:12px 16px}
+  .pfk>div:nth-child(odd){border-left:0}
+  .pfk>div:nth-child(n+3){border-top:1px solid var(--br)}
+  .pfk b{font-size:18px}
+  .pfg{grid-template-columns:1fr}
+  .pfg .pfs:first-child{grid-row:auto}
+}
