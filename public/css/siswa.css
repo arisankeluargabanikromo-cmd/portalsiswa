@@ -1,0 +1,133 @@
+/* SekolahHub: tampilan akun Siswa (js/siswa.js). Dimuat setelah idcard.css.
+   Hanya memakai token tema aplikasi (terang/gelap). Kartu pelajar tetap berwarna tetap karena media cetak fisik (lihat idcard.css).
+   Kelas berawalan "sw" agar tidak bentrok dengan kelas lain. Titik henti 860px sama dengan mobile.css. */
+
+/* ============ Kartu pelajar (tombol pembuka pratinjau) ============ */
+.swc,.swc:hover,.swc:active{display:block;position:relative;width:100%;min-height:0;padding:0;border:0;border-radius:14px;background:none;box-shadow:none;transform:none;text-align:left;cursor:zoom-in}
+.swc:focus-visible{outline:3px solid var(--pr);outline-offset:3px}
+.swc .idc{width:100%}
+.swc-h{display:block;margin-top:9px;text-align:center;font-size:12px;font-weight:500;color:var(--mu)}
+
+/* ============ Beranda desktop: kartu di kiri, ringkasan profil (siswa, orang tua, wali) di kanan ============ */
+.swh{display:grid;grid-template-columns:minmax(300px,460px) minmax(0,1fr);gap:28px;align-items:center;margin:0 0 22px;padding:22px;background:var(--sf);border:1px solid var(--br);border-radius:18px}
+.swh-c{min-width:0}
+.swh-i{display:flex;flex-direction:column;gap:14px;min-width:0}
+.swh-t{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.swh-t>div{min-width:0}
+.swh-g{font-size:22px;font-weight:800;line-height:1.25;letter-spacing:-.01em;overflow-wrap:anywhere}
+.swh-s{margin:2px 0 0}
+.swh-t .btn{flex:none;white-space:nowrap}
+.swg-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 22px}
+.swg{min-width:0;padding:12px 14px;border:1px solid var(--br);border-radius:12px;background:var(--w1)}
+.swg:first-child{grid-row:span 2}
+.swg h4{margin:0 0 6px;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--pr)}
+.swf{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 0;border-bottom:1px solid var(--br);font-size:13.5px}
+.swf:last-child{border-bottom:0;padding-bottom:0}
+.swf span{flex:none;color:var(--mu)}
+.swf b{min-width:0;text-align:right;font-weight:600;overflow-wrap:anywhere}
+/* Desktop sempit (861 sampai 1180px): kartu di atas, profil di bawahnya, agar tidak ada yang terjepit */
+@media screen and (min-width:861px) and (max-width:1180px){
+  .swh{grid-template-columns:minmax(0,1fr);gap:18px}
+  .swh-c{max-width:460px}
+}
+.swt{margin:22px 0 2px;font-size:18px}
+.swt+.sub{margin-top:0}
+/* Empat kartu KPI: 2x2 di desktop biasa (teks nominal tidak terpotong), sebaris di layar sangat lebar; di mobile mengikuti karosel mobile.css */
+/* selektor mengikuti main:has(.board) .grid milik dashboard (3 kolom) agar menang */
+@media screen and (min-width:861px){main:has(.board) .grid.sw-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media screen and (min-width:1700px){main:has(.board) .grid.sw-kpi{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.sw-g1{grid-template-columns:1fr;justify-items:center}
+.sw-g1 .gauge{max-width:170px}
+@media screen and (max-width:860px){main:has(#hm)>.grid.sw-kpi>.kpi:first-child{display:flex}}
+
+/* ============ Beranda mobile: kartu menumpuk di atas header gradien (seperti kartu saldo admin) ============ */
+.swm-h{position:relative;margin:-44px 16px 0;max-width:460px}
+@media screen and (max-width:860px){
+  .swh{display:none}
+  .swm-h{margin-left:auto;margin-right:auto;padding:0 16px;max-width:492px;box-sizing:border-box}
+  .swm-h .swc{border-radius:14px}
+}
+
+/* ============ Komponen halaman ============ */
+.swb{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 14px}
+.swn{display:flex;align-items:center;justify-content:center;gap:14px;margin:2px 0 14px}
+.swn b{min-width:120px;text-align:center;font-size:16px}
+.swn button{width:40px;height:40px;min-height:0;padding:0;border-radius:50%;font-size:22px;line-height:1}
+
+/* Iuran: kartu status per bulan (teks + warna, bukan warna saja) */
+.swm-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-bottom:14px}
+.swm{display:flex;flex-direction:column;gap:2px;padding:11px 12px;border:1px solid var(--br);border-radius:12px;background:var(--sf);min-width:0}
+.swm b{font-size:15px}
+.swm span{font-size:12.5px;font-weight:700}
+.swm small{min-height:1.2em;font-size:12px;color:var(--mu)}
+.swm.st-lunas{border-color:color-mix(in srgb,var(--ok) 45%,transparent);background:color-mix(in srgb,var(--ok) 10%,var(--sf))}.swm.st-lunas span{color:var(--ok)}
+.swm.st-sebagian{border-color:color-mix(in srgb,var(--ac) 45%,transparent);background:color-mix(in srgb,var(--ac) 10%,var(--sf))}.swm.st-sebagian span{color:var(--ac)}
+.swm.st-belum{border-color:color-mix(in srgb,var(--er) 40%,transparent);background:color-mix(in srgb,var(--er) 8%,var(--sf))}.swm.st-belum span{color:var(--er)}
+.swm.st-nanti{opacity:.62}.swm.st-nanti span{color:var(--mu)}
+
+/* Pengingat */
+.swr-l{display:flex;flex-direction:column;gap:8px}
+.swr{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--br);border-radius:12px;background:var(--w1);color:var(--tx);text-decoration:none}
+.swr:hover{background:var(--w2)}
+.swr i{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;font-style:normal;font-size:15px;font-weight:800}
+.swr.ok i{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.swr.warn i{background:color-mix(in srgb,var(--ac) 20%,transparent);color:var(--ac)}
+.swr.info i{background:color-mix(in srgb,var(--inf) 18%,transparent);color:var(--inf)}
+.swr span{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.swr b{font-size:14.5px;overflow-wrap:anywhere}
+.swr small{font-size:13px;color:var(--mu);overflow-wrap:anywhere}
+.swr em{flex:none;font-style:normal;font-size:22px;line-height:1;color:var(--mu)}
+
+/* Absensi: empat kartu ringkasan sebaris (2x2 di layar sempit) dan kalender bulanan */
+.grid.sw4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media screen and (max-width:700px){.grid.sw4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.swa-h,.swa{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.swa-h span{padding-bottom:4px;text-align:center;font-size:12px;font-weight:700;color:var(--mu)}
+.swa-d{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;height:52px;border:1px solid var(--br);border-radius:10px;background:var(--w1)}
+.swa-d b{font-size:13px;font-weight:600}
+.swa-d span{height:13px;font-size:11px;font-weight:800;line-height:13px}
+.swa-d.we{opacity:.55}
+.swa-d.sH,.swa-d.sS,.swa-d.sI,.swa-d.sA{opacity:1}
+.swa-d.sH,.swa-l i.sH{background:color-mix(in srgb,var(--ok) 18%,transparent);border-color:color-mix(in srgb,var(--ok) 42%,transparent);color:var(--ok)}
+.swa-d.sS,.swa-l i.sS{background:color-mix(in srgb,var(--inf) 18%,transparent);border-color:color-mix(in srgb,var(--inf) 42%,transparent);color:var(--inf)}
+.swa-d.sI,.swa-l i.sI{background:color-mix(in srgb,var(--ac) 20%,transparent);border-color:color-mix(in srgb,var(--ac) 45%,transparent);color:var(--ac)}
+.swa-d.sA,.swa-l i.sA{background:color-mix(in srgb,var(--er) 16%,transparent);border-color:color-mix(in srgb,var(--er) 42%,transparent);color:var(--er)}
+.swa-l{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;font-size:13px;color:var(--mu)}
+.swa-l span{display:inline-flex;align-items:center;gap:6px}
+.swa-l i{display:inline-grid;place-items:center;width:22px;height:22px;border:1px solid var(--br);border-radius:6px;font-style:normal;font-size:11px;font-weight:800}
+
+/* Agenda dan pengumuman */
+.swi{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid var(--br)}
+.swi:last-child{border:0}
+.swi>div:last-child{flex:1;min-width:0}
+.swd{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;width:52px;height:56px;border-radius:12px;background:color-mix(in srgb,var(--pr) 14%,transparent);color:var(--pr);line-height:1.1}
+.swd b{font-size:20px}
+.swd span{font-size:11px;font-weight:700;text-transform:uppercase}
+.swi-t{margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* Data Siswa: identitas ringkas + kartu depan dan belakang berdampingan */
+.swp{margin-bottom:14px}
+.swp-i{display:flex;flex-wrap:wrap;align-items:center;gap:16px}
+.swp-i>div{flex:1;min-width:160px}
+.swp-i h3{margin:0 0 2px;font-size:18px}
+.swk{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:14px}
+.swk figure{display:flex;flex-direction:column;align-items:center;gap:10px;margin:0;padding:16px;background:var(--sf);border:1px solid var(--br);border-radius:16px}
+.swk-c{width:100%;max-width:440px}
+.swk-c .idc{width:100%}
+.swk figcaption{font-size:13px;font-weight:600;color:var(--mu)}
+@media screen and (max-width:860px){.swk{grid-template-columns:1fr}.swk figure{padding:14px}}
+
+/* Voting */
+.swv{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;margin-top:8px}
+
+@media screen and (max-width:480px){
+  .swa-h,.swa{gap:4px}
+  .swa-d{height:40px;border-radius:8px}
+  .swm-g{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .swm{padding:9px 10px}
+}
+
+/* Mode hanya-baca (body.ro) menyembunyikan tombol di .acts; tombol Tutup dan Cetak pada dialog buku tabungan/bukti tetap harus terlihat */
+.ro #dlg .acts button#x,.ro #dlg .acts button#pr{display:inline-flex!important}
+
+@media print{.swh,.swm-h{display:none!important}}

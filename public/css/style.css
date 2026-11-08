@@ -348,11 +348,11 @@ html.tfx *,html.tfx *::before,html.tfx *::after{transition:background-color .3s 
 .lgr{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--ln)}
 .lgp .bt{border-radius:22px}.lgi{flex:1;min-width:220px}.lgi .lab{margin:2px 0 10px}.lgi .pbar{margin-bottom:0}.lgi .nt{margin:10px 0 0}
 .chips{display:flex;flex-wrap:wrap;gap:8px}.chip{border-radius:99px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}.rc{margin-top:14px}
-.mx{display:grid;grid-template-columns:minmax(0,2.1fr) repeat(4,minmax(0,1fr));border:1px solid var(--br);border-radius:12px;overflow:hidden}
+.mx{display:grid;grid-template-columns:minmax(0,2fr) repeat(5,minmax(0,1fr));border:1px solid var(--br);border-radius:12px;overflow:hidden}
 .mx>div{padding:10px;border-bottom:1px solid var(--ln);font-size:13px;display:flex;align-items:center;line-height:1.3}
 .mx>.c{justify-content:center;text-align:center}.mx>.mh{font-size:12px;font-weight:700;color:var(--mu);background:var(--w1)}
 .mx>.y{color:var(--ok)}.mx>.n{color:var(--mu)}.mx>.a{color:var(--ac);font-size:11.5px;font-weight:700}
-.mx>div:nth-last-child(-n+5){border-bottom:0}.mx svg{width:18px;height:18px}
+.mx>div:nth-last-child(-n+6){border-bottom:0}.mx svg{width:18px;height:18px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .item.pnd{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap}.pni{min-width:0}.pni b{word-break:break-all}.pni .lab{margin:0}
 .pnr{display:flex;gap:8px;align-items:center}.pnr select{width:auto;min-width:130px}
@@ -363,7 +363,7 @@ html.tfx *,html.tfx *::before,html.tfx *::after{transition:background-color .3s 
 .nkk{display:flex;flex-direction:column;font-weight:700;line-height:1.2}.nkk small{font-weight:400}.nk input:not([type=checkbox]){margin:0}.lul{margin:0!important;white-space:nowrap}
 .sav[hidden]{display:none}.sav .sp{flex:1}.sav .mu{font-size:13px;align-self:center}
 .mob-only{display:none}
-@media(max-width:600px){.drw{flex-direction:column;align-items:stretch}.drw>button{width:100%}.lgi{min-width:0}.mx{grid-template-columns:minmax(0,2.5fr) repeat(4,minmax(0,1fr))}.mx>div{padding:9px 6px;font-size:12px}.mx>.mh{font-size:11px}.mx>.c{padding:9px 2px}}
+@media(max-width:600px){.drw{flex-direction:column;align-items:stretch}.drw>button{width:100%}.lgi{min-width:0}.mx{grid-template-columns:minmax(0,2.3fr) repeat(5,minmax(0,1fr))}.mx>div{padding:9px 6px;font-size:12px}.mx>.mh{font-size:11px}.mx>.c{padding:9px 2px}}
 @media print{.sx,.sav{display:none!important}}
 
 /* ===== Layar masuk: panel merek + form ===== */
@@ -444,3 +444,36 @@ dialog.imp{width:min(880px,96vw)}
 }
 
 .kv b.ok{color:var(--ok)}.kv b.er{color:var(--er)}
+
+/* ===== Akun: persetujuan terpandu, peran siswa ===== */
+.akb{display:grid;gap:6px;padding:12px 14px;border-radius:12px;background:var(--w2);margin:0 0 14px}.akb b{word-break:break-all}.akb .lab{margin:0}
+.akn{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}.akb .akn{margin-top:2px}.pf .akn{margin-top:8px}td .akn{margin-top:4px}
+.akc{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;border-radius:99px;padding:3px 10px;width:fit-content;line-height:1.4}
+.akc.ok{background:color-mix(in srgb,var(--ok) calc(var(--tn) * .55),transparent);color:var(--ok)}
+.akc.wn{background:color-mix(in srgb,var(--ac) calc(var(--tn) * .55),transparent);color:var(--ac)}
+.akc.mu{background:var(--w3);color:var(--mu)}
+.rls{display:grid;gap:8px}
+.rl{display:flex;flex-direction:row;gap:12px;align-items:flex-start;padding:10px 12px;border:1px solid var(--br);border-radius:12px;cursor:pointer;margin:0}
+.rl input{margin-top:3px;width:auto;flex:none}.rl small{display:block;color:var(--mu);font-size:12.5px;margin-top:1px;font-weight:400}
+.rl.on{border-color:var(--pr);background:color-mix(in srgb,var(--pr) calc(var(--tn) * .45),transparent)}.rl.off{opacity:.55;cursor:not-allowed}
+.pkl{max-height:min(34vh,260px);overflow:auto;border:1px solid var(--br);border-radius:12px;margin:8px 0 6px}
+.pkr{display:flex;flex-direction:row;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--ln);margin:0;cursor:pointer;font-size:13.5px}
+.pkr:last-child{border-bottom:0}.pkr input{width:auto;flex:none;margin:0}.pkn{flex:1;min-width:0}.pkn small{display:block;color:var(--mu);font-size:12px}
+.pkr em{font-style:normal;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.pkt{background:var(--w3);color:var(--mu)}.pkm{background:color-mix(in srgb,var(--ok) calc(var(--tn) * .55),transparent);color:var(--ok)}
+.wl{padding-left:20px;line-height:1.65;margin:10px 0 4px}
+/* Pilihan jenis pendaftar di layar masuk */
+.arole{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:4px;border-radius:14px;background:var(--w2)}
+.arole button,.arole button:hover{border:0;background:transparent;border-radius:10px;min-height:38px;padding:6px 4px;font-weight:600;font-size:13.5px;color:var(--mu);box-shadow:none}
+.arole button[aria-checked=true],.arole button[aria-checked=true]:hover{background:var(--sf2);color:var(--tx);box-shadow:var(--sh)}
+.afh{margin:6px 2px 0;font-size:12px;line-height:1.45;color:var(--mu)}
+.chips .chip.on{color:var(--pr);border-color:color-mix(in srgb,var(--pr) 40%,transparent);background:color-mix(in srgb,var(--pr) calc(var(--tn) * .4),transparent)}
+@media(max-width:600px){.mx>div{padding:9px 4px;font-size:11.5px}.mx>.mh{font-size:9.5px;padding:9px 1px;letter-spacing:-.2px}.mx>.a{font-size:10px;padding:9px 1px}}
+/* Daftar pengguna berbentuk kartu (responsif) */
+.ucs{padding:0;overflow:hidden}.ucs>.empty{margin:14px}
+.uc{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) auto;gap:10px 20px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--ln)}
+.uc:last-child{border-bottom:0}.ucm b{word-break:break-all}.ucm .lab{margin:6px 0 0}
+.ucr label{margin:0 0 4px;font-size:12px;color:var(--mu)}.ucr select{margin:0}.ucl{font-size:13px;margin-top:8px;line-height:1.5}
+.uca{display:flex;justify-content:flex-end}
+@media(max-width:860px){.uc{grid-template-columns:1fr;gap:12px;padding:16px 14px}.uca{justify-content:stretch}.uca button{width:100%}}
+.akb .akc{background:transparent;border:1px solid var(--br)}.akb .akc.ok{border-color:color-mix(in srgb,var(--ok) 45%,transparent)}.akb .akc.wn{border-color:color-mix(in srgb,var(--ac) 45%,transparent)}

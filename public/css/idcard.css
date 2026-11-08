@@ -51,7 +51,7 @@
 .idcap{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;max-width:100%;min-width:0;font-size:13px}
 .idcap b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
 .idcap span{color:var(--mu)}
-.idcap .idwt{background:color-mix(in srgb,var(--ac) 16%,transparent);border-color:color-mix(in srgb,var(--ac) 45%,transparent);color:var(--ac)}
+.idcap .idwt{background:color-mix(in srgb,var(--ac) calc(var(--tn) * .55),transparent);border-color:color-mix(in srgb,var(--ac) 45%,transparent);color:var(--ac)}
 
 dialog.idd{width:min(660px,96vw)}
 .idpair{display:flex;flex-wrap:wrap;justify-content:center;gap:18px;margin:6px 0 4px}
