@@ -35,14 +35,38 @@
   let tab = 'login', mail = '', kj = 'siswa', nisv = '';   // kj/nisv: klaim saat mendaftar (hanya saran untuk admin)
 
   function logoTile(bc, n) {
-    const i = bc.u ? `<img src='${esc(bc.u)}' alt='' width='${n}' height='${n}' onerror='Brand.bad(this)'>` : Brand.mark();
+    const i = bc.u ? `<img src='${esc(bc.u)}' alt='Logo ${esc(bc.n)}' width='${n}' height='${n}' onerror='Brand.bad(this)'>` : Brand.mark();
     return `<span class='bt ${bc.u ? 'has' : ''}' style='width:${n}px;height:${n}px'>${i}</span>`;
   }
+  /* Kop sekolah: logo besar di tengah, instansi, nama sekolah, alamat, dan garis ganda ala kop surat. */
+  function kop(bc) {
+    const app = bc.a || 'SekolahHub', kontak = [bc.ad, bc.tl ? 'Telp. ' + bc.tl : ''].filter(Boolean).join(' · ');
+    return `<div class='abk'><div class='abl'>${logoTile(bc, 124)}</div>`
+      + (bc.i ? `<div class='abki'>${esc(bc.i)}</div>` : '')
+      + `<h2 class='abks${bc.n ? '' : ' app'}'>${esc(bc.n || app)}</h2>`
+      + (kontak ? `<p class='abka'>${esc(kontak)}</p>` : '')
+      + `<i class='abru' aria-hidden='true'></i></div>`;
+  }
+  function brandPanel(bc, full) {
+    const app = bc.a || 'SekolahHub';
+    return `<div class='abr'><div class='abt'><span class='abn'>${esc(app)}</span></div>${kop(bc)}`
+      + (full === false ? '' : `<div class='abh'><p class='abh2'>Kelola tabungan dan data kelas dengan rapi.</p><p class='abh3'>Satu tempat untuk setoran, iuran, absensi, dan komunikasi dengan wali murid.</p></div>`
+      + `<ul class='abf'>${FEAT.map(f => `<li><span class='abi'>${P(IC[f[0]], 20)}</span><div><b>${f[1]}</b><small>${f[2]}</small></div></li>`).join('')}</ul>`) + `</div>`;
+  }
   function shell(inner, bc) {
-    return `<div class='ash'><div class='abr'><div class='abt'>${logoTile(bc, 46)}<div><b>SekolahHub</b>${bc.n ? `<small>${esc(bc.n)}</small>` : ''}</div></div>`
-      + `<div class='abh'><p class='abh2'>Kelola tabungan dan data kelas dengan rapi.</p><p class='abh3'>Satu tempat untuk setoran, iuran, absensi, dan komunikasi dengan wali murid.</p></div>`
-      + `<ul class='abf'>${FEAT.map(f => `<li><span class='abi'>${P(IC[f[0]], 20)}</span><div><b>${f[1]}</b><small>${f[2]}</small></div></li>`).join('')}</ul></div>`
-      + `<div class='afm'>${inner}</div></div><button type='button' class='thf' data-theme-cycle aria-label='Ganti tampilan'><span data-theme-icon></span></button>`;
+    document.title = (bc.a || 'SekolahHub') + (bc.n ? ' – ' + bc.n : '');
+    return `<div class='ash'>${brandPanel(bc)}<div class='afm'>${inner}</div></div><button type='button' class='thf' data-theme-cycle aria-label='Ganti tampilan'><span data-theme-icon></span></button>`;
+  }
+  /* Perangkat baru belum punya salinan merek: ambil dari server (fungsi publik brand_publik, migrasi 014) lalu gambar ulang panel kiri saja. */
+  let fetched = false;
+  function refreshBrand() {
+    if (fetched) return; fetched = true;
+    Data.brandPublik().then(b => {
+      if (!b || !(b.n || b.u || b.a)) return;
+      const o = JSON.stringify(Brand.cached()); Brand.put(b);
+      const nb = Brand.cached(), el = document.querySelector('#auth .abr');
+      if (el && JSON.stringify(nb) !== o) { el.outerHTML = brandPanel(nb); document.title = (nb.a || 'SekolahHub') + (nb.n ? ' – ' + nb.n : ''); }
+    });
   }
 
   function authScreen(mode, msg) {
@@ -51,29 +75,29 @@
 
     /* ----- Menunggu persetujuan ----- */
     if (mode == 'pending') {
-      a.innerHTML = shell(`<div class='afc'><span class='aic'>${P(IC.clock, 28)}</span><h1>Menunggu persetujuan</h1>`
+      a.innerHTML = shell(`<div class='afc mid'><span class='aic'>${P(IC.clock, 28)}</span><h1>Menunggu persetujuan</h1>`
         + `<p class='afs'>Akun sudah terdaftar. Admin perlu menyetujui akun ini sebelum data sekolah dapat dibuka.</p>`
         + `<div class='aem'>${P(IC.mail, 16)}<span>${esc(Data.user.email)}</span></div>`
         + (Data.klaim ? `<p class='afs'>Anda mendaftar sebagai <b>${esc({ siswa: 'Siswa', ortu: 'Orang tua', staf: 'Guru / staf' }[Data.klaim.jenis] || 'pengguna')}</b>${Data.klaim.nis ? ', NIS <b>' + esc(Data.klaim.nis) + '</b>' : ''}. Admin akan mencocokkannya dengan data siswa.</p>` : '')
         + `<button class='p afb' id='re' type='button'>Periksa lagi</button><button class='afb afg' id='lo' type='button'>Keluar</button>`
         + `<p class='afn'>Anda akan bisa masuk setelah admin menetapkan peran untuk akun ini. Hubungi admin atau wali kelas bila terlalu lama.</p></div>`, bc);
-      Theme.refresh(); $('#re').onclick = () => location.reload(); $('#lo').onclick = () => Data.logout(); return;
+      Theme.refresh(); refreshBrand(); $('#re').onclick = () => location.reload(); $('#lo').onclick = () => Data.logout(); return;
     }
 
     /* ----- Masuk / Daftar ----- */
     const reg = tab == 'daftar';
-    a.innerHTML = shell(`<div class='afc'><h1>${reg ? 'Buat akun baru' : 'Selamat datang kembali'}</h1><p class='afs'>${reg ? 'Daftar lalu tunggu persetujuan admin.' : 'Masuk untuk mengelola tabungan dan data kelas.'}</p>`
-      + `<div class='aseg' role='tablist' aria-label='Masuk atau daftar'><button type='button' role='tab' data-tab='login' aria-selected='${!reg}'>Masuk</button><button type='button' role='tab' data-tab='daftar' aria-selected='${reg}'>Daftar</button></div>`
-      + `<form id='af' novalidate>`
+    a.innerHTML = shell(`<div class='afc'><div class='afh0'><h1>${reg ? 'Buat akun baru' : 'Selamat datang kembali'}</h1><p class='afs'>${reg ? 'Daftar lalu tunggu persetujuan admin.' : 'Masuk untuk mengelola tabungan dan data kelas.'}</p>`
+      + `<div class='aseg' role='tablist' aria-label='Masuk atau daftar'><button type='button' role='tab' data-tab='login' aria-selected='${!reg}'>Masuk</button><button type='button' role='tab' data-tab='daftar' aria-selected='${reg}'>Daftar</button></div></div>`
+      + `<form id='af' novalidate><div class='afbd'>`
       + `<div class='af'><label for='em'>Email</label><div class='afi'>${P(IC.mail)}<input id='em' type='email' inputmode='email' autocomplete='username' autocapitalize='off' spellcheck='false' placeholder='nama@email.com' value='${esc(mail)}' required></div></div>`
       + `<div class='af'><label for='pw'>Kata sandi</label><div class='afi pw'>${P(IC.lock)}<input id='pw' type='password' autocomplete='${reg ? 'new-password' : 'current-password'}' placeholder='Minimal 6 karakter' required><button type='button' class='eye' id='ey' aria-label='Tampilkan kata sandi' aria-pressed='false'>${P(IC.eye)}</button></div><div class='cap' id='cap' role='status'>Caps Lock sedang aktif</div></div>`
       + (reg ? `<div class='af'><label for='pw2'>Ulangi kata sandi</label><div class='afi pw'>${P(IC.lock)}<input id='pw2' type='password' autocomplete='new-password' placeholder='Ketik ulang kata sandi' required></div></div>` : '')
       + (reg ? `<div class='af'><label id='kjl'>Saya mendaftar sebagai</label><div class='arole' role='radiogroup' aria-labelledby='kjl'>${[['siswa', 'Siswa'], ['ortu', 'Orang tua'], ['staf', 'Guru / staf']].map(k => `<button type='button' role='radio' data-kj='${k[0]}' aria-checked='${kj == k[0]}'>${k[1]}</button>`).join('')}</div></div>`
-        + `<div class='af' id='nisw' ${kj == 'staf' ? 'hidden' : ''}><label for='nis' id='nisl'>${kj == 'ortu' ? 'NIS anak' : 'NIS siswa'} <span class='mu'>(opsional)</span></label><div class='afi'>${P(IC.clip)}<input id='nis' type='text' inputmode='numeric' autocomplete='off' maxlength='40' placeholder='Contoh: 2024100' value='${esc(nisv)}'></div><div class='afh'>Membantu admin mencocokkan akun Anda dengan data siswa. Admin tetap memverifikasi sebelum akun aktif.</div></div>` : '')
+        + `<div class='af' id='nisw' ${kj == 'staf' ? 'hidden' : ''}><label for='nis' id='nisl'>${kj == 'ortu' ? 'NIS anak' : 'NIS siswa'} <span class='mu'>(opsional)</span></label><div class='afi'>${P(IC.clip)}<input id='nis' type='text' inputmode='numeric' autocomplete='off' maxlength='40' placeholder='Contoh: 2024100' value='${esc(nisv)}'></div><div class='afh'>Membantu admin mencocokkan akun dengan data siswa.</div></div>` : '')
       + `<div id='aerr' class='amsg' role='alert' aria-live='polite'></div>`
-      + `<button class='p afb' id='sb' type='submit'><span class='lb'>${reg ? 'Buat akun' : 'Masuk'}</span></button></form>`
-      + `<p class='afn'>${reg ? 'Akun baru perlu disetujui admin sebelum dapat membuka data. Akun pertama yang mendaftar otomatis menjadi admin.' : 'Belum punya akun? Pilih <b>Daftar</b>. Lupa kata sandi? Hubungi admin sekolah.'}</p></div>`, bc);
-    Theme.refresh();
+      + `<button class='p afb' id='sb' type='submit'><span class='lb'>${reg ? 'Buat akun' : 'Masuk'}</span></button></div></form>`
+      + `<p class='afn'>${reg ? 'Akun baru perlu disetujui admin sebelum dapat membuka data. Akun pertama otomatis menjadi admin.' : 'Belum punya akun? Pilih <b>Daftar</b>. Lupa kata sandi? Hubungi admin sekolah.'}</p></div>`, bc);
+    Theme.refresh(); refreshBrand();
 
     const em = $('#em'), pw = $('#pw'), err = $('#aerr'), sb = $('#sb');
     const note = (t, ok) => { err.textContent = t || ''; err.classList.toggle('ok', !!ok) };

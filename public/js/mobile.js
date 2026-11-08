@@ -66,8 +66,8 @@
         + `<section class='mn-g'><h4>Beranda</h4><div class='mn-l'><button type='button' class='mn-r' data-edit style='--c:var(--pr)'><span class='mn-i'>${S(IC.sliders)}</span><span><b>Atur layanan Beranda</b><small>Pilih menu yang tampil di layar utama</small></span>${S(IC.chev)}</button></div></section>`;
     }
     g += `<section class='mn-g'><h4>Tampilan</h4><div class='mn-l mn-p'>${Theme.picker()}<p class='mn-n'>Terang, gelap, atau mengikuti pengaturan perangkat. Pilihan tersimpan di perangkat ini.</p></div></section>`;
-    return `<div class='mn-h'><div class='mn-a'>${esc((email[0] || '?').toUpperCase())}</div><div><b>${esc(email)}</b><small>${esc(db.cfg.sekolah || 'SekolahHub')}</small><span class='tag'>${esc(ROLE[Data.role] || Data.role)}</span></div></div>`
-      + g + `<button class='mn-out' onclick='Data.logout()'>Keluar dari akun</button><p class='mn-v'>SekolahHub · ${esc(db.cfg.sekolah || '')}</p>`;
+    return `<div class='mn-h'><div class='mn-a'>${esc((email[0] || '?').toUpperCase())}</div><div><b>${esc(email)}</b><small>${esc(db.cfg.sekolah || Brand.name())}</small><span class='tag'>${esc(ROLE[Data.role] || Data.role)}</span></div></div>`
+      + g + `<button class='mn-out' onclick='Data.logout()'>Keluar dari akun</button><p class='mn-v'>${esc(Brand.name())} · ${esc(db.cfg.sekolah || '')}</p>`;
   };
 
   /* ---------- Navigasi bawah: hanya 3 menu ---------- */
@@ -86,7 +86,7 @@
   /* ---------- App bar ---------- */
   let hops = 0;
   function titles() {
-    const s = db.siswa.find(x => x.id == PID), sk = db.cfg.sekolah || 'SekolahHub';
+    const s = db.siswa.find(x => x.id == PID), sk = db.cfg.sekolah || Brand.name();
     if (cur == 'dashboard' || cur == 'portal') return [sk, db.cfg.tahun ? 'Tahun ajaran ' + db.cfg.tahun : ''];
     if (cur == 'menu') return ['Akun', ''];
     if (cur == 'profil') return [s ? s.nama : 'Profil siswa', s ? 'Kelas ' + s.kelas : ''];
@@ -106,7 +106,7 @@
     document.body.classList.toggle('home', home);
     $('#mlead').innerHTML = isTop(cur) ? (Brand.url() ? Brand.tile(36, 'mlt') : LOGO) : `<button type='button' data-back aria-label='Kembali'>${S(IC.back)}</button>`;
     const [a, b] = titles(); $('#mtt b').textContent = a; $('#mtt span').textContent = b;
-    document.title = (a || 'SekolahHub') + ' – SekolahHub';
+    document.title = (a || Brand.name()) + ' – ' + Brand.name();
     if (window.Theme) Theme.meta();
   }
   function goBack() {
@@ -206,6 +206,7 @@
   /* ---------- Dekorasi tabel ---------- */
   function tables() {
     $('#app').querySelectorAll('table').forEach(t => {
+      if (t.classList.contains('stm') || t.classList.contains('pp-tb')) return;   // tabel buku/kertas (statement.js) punya tata letak ponsel sendiri
       const rows = [...t.rows], hr = rows.find(r => r.querySelector('th')); if (!hr) return;
       const hs = [...hr.cells].map(c => c.textContent.trim());
       const abs = !!t.querySelector('input[type=radio]'), wide = hs.includes('Jan') && hs.includes('Des');

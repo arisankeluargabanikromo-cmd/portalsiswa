@@ -9,20 +9,24 @@
   const CFG = window.SH_CONFIG || {};
   let sb = null;
 
+  // Kolom buku besar (migrasi 013). Dikirim hanya bila migrasi sudah dijalankan (Data.bankOk !== false).
+  // ref, rev_of, waktu, petugas: kosong dikirim sebagai NULL (indeks unik pada ref/rev_of). waktu dan petugas dicap ulang oleh server.
+  const BANK = ['ref', 'rev_of', 'kanal', 'waktu', 'petugas'], BANKX = new Set([...BANK, 'kat']), NUL = new Set(['ref', 'rev_of', 'waktu', 'petugas']);
   // Pemetaan koleksi di app.js -> tabel Supabase
   const MAP = {
     siswa:    { table: 'siswa', order: 'nama', dates: ['tgl', 'masuk'],
                 cols: ['nama','nis','nisn','kelas','jk','tl','tgl','agama','gol','alamat','hp','ayah','ibu','wali','pkj','hobi','cita','kes','masuk','bio','foto','cover','target'] },
-    tab:      { table: 'tabungan',   order: 'tgl', dates: ['tgl'], cols: ['sid','tgl','jenis','jml','cat'] },
-    iuran:    { table: 'iuran',      order: 'bulan', dates: ['tgl','minggu'], cols: ['sid','bulan','minggu','jml','tgl','cat'] },   // minggu = tanggal Senin (migrasi 012)
+    tab:      { table: 'tabungan',   order: 'tgl', dates: ['tgl'], cols: ['sid','tgl','jenis','jml','cat', ...BANK] },
+    iuran:    { table: 'iuran',      order: 'bulan', dates: ['tgl','minggu'], cols: ['sid','bulan','minggu','jml','tgl','cat', ...BANK] },   // minggu = tanggal Senin (migrasi 012)
     absensi:  { table: 'absensi',    order: 'tgl', dates: ['tgl'], cols: ['sid','tgl','st'] },
-    kas:      { table: 'kas',        order: 'tgl', dates: ['tgl'], cols: ['tgl','jenis','jml','ket'] },
+    kas:      { table: 'kas',        order: 'tgl', dates: ['tgl'], cols: ['tgl','jenis','jml','ket','kat', ...BANK] },
     agenda:   { table: 'agenda',     order: 'tgl', dates: ['tgl'], cols: ['tgl','judul','ket'] },
     info:     { table: 'pengumuman', order: 'tgl', dates: ['tgl'], cols: ['tgl','judul','isi'] },
     vote:     { table: 'voting',     order: 'created_at', cols: ['judul','open','kand','suara'] },
     struktur: { table: 'struktur',   order: 'created_at', cols: ['jab','sid'] },
     log:      { table: 'aktivitas',  order: 't', desc: true, keep: true, limit: 150, cols: ['t','m'] }
   };
+  const LEDGER = new Set(['tab', 'iuran']);
   const ORDER = Object.keys(MAP); // siswa lebih dulu karena tabel lain bergantung padanya
   const DEFAULT = { open: true, kand: [], suara: {}, jml: 0, t: 0 };
   const uid = () => Math.random().toString(36).slice(2, 10);
@@ -35,8 +39,10 @@
     const m = MAP[k], r = { id: it.id };
     for (const c of m.cols) {
       if (k === 'iuran' && c === 'minggu' && Data.weekOk === false) continue;
+      if (BANKX.has(c) && Data.bankOk === false) continue;
       let v = it[c];
       if (m.dates && m.dates.includes(c) && !v) v = null;
+      else if (NUL.has(c) && !v) v = null;
       else if (v === undefined || v === null) v = c in DEFAULT ? DEFAULT[c] : '';
       if (c === 'jml' || c === 't' || c === 'target') v = Number(v) || 0;
       r[c] = v;
@@ -52,13 +58,16 @@
     return o;
   }
   // Kolom tambahan (logo, kepsek, alamat, telp) hanya dikirim bila migrasi 007 sudah dijalankan; bila tidak, simpan tetap berhasil.
-  let cfgExt = false, cfgIns = false, cfgNip = false;   // cfgIns: migrasi 008 (instansi), cfgNip: migrasi 009 (NIP kepala sekolah)
+  let cfgExt = false, cfgIns = false, cfgNip = false, cfgBank = false, cfgApp = false;   // cfgApp: migrasi 014 (nama aplikasi)
+     // cfgBank: migrasi 013 (tutup buku, saldo mengendap, batas otorisasi)
+     // cfgIns: migrasi 008 (instansi), cfgNip: migrasi 009 (NIP kepala sekolah)
   const cfgRow = c => Object.assign({ id: 1, sekolah: c.sekolah || '', tahun: c.tahun || '', walikelas: c.walikelas || '', iuran: Number(c.iuran) || 0, wa_tab: c.watab || '', wa_iuran: c.waiuran || '' },
-    cfgExt ? { logo: c.logo || '', kepsek: c.kepsek || '', alamat: c.alamat || '', telp: c.telp || '' } : {}, cfgIns ? { instansi: c.instansi || '' } : {}, cfgNip ? { kepsek_nip: c.kepsek_nip || '' } : {});
+    cfgExt ? { logo: c.logo || '', kepsek: c.kepsek || '', alamat: c.alamat || '', telp: c.telp || '' } : {}, cfgIns ? { instansi: c.instansi || '' } : {}, cfgNip ? { kepsek_nip: c.kepsek_nip || '' } : {}, cfgApp ? { app_nama: c.app_nama || 'SekolahHub' } : {},
+    cfgBank ? { tutup_buku: c.tutup || null, saldo_min: Number(c.saldomin) || 0, limit_otor: Number(c.limitotor) || 0 } : {});
 
   // Hitung perubahan sekarang juga (sinkron), kirim ke server lewat antrian
   function plan(db) {
-    const up = {}, del = {};
+    const up = {}, del = {}, alive = new Set((db.siswa || []).map(x => x.id));
     for (const k of ORDER) {
       const m = MAP[k], prev = snap[k] || new Map(), cur = new Map();
       for (const it of db[k] || []) {
@@ -67,7 +76,11 @@
         cur.set(it.id, j);
         if (prev.get(it.id) !== j) (up[k] = up[k] || []).push(r);
       }
-      if (!m.keep) for (const id of prev.keys()) if (!cur.has(id)) (del[k] = del[k] || []).push(id);
+      if (!m.keep) for (const id of prev.keys()) if (!cur.has(id)) {
+        // Buku besar tidak boleh dihapus baris demi baris oleh pengurus. Bila siswanya yang dihapus, server membersihkan turunannya (cascade).
+        if (LEDGER.has(k) && !alive.has(JSON.parse(prev.get(id)).sid)) continue;
+        (del[k] = del[k] || []).push(id);
+      }
       snap[k] = m.keep ? new Map([...prev, ...cur]) : cur; // jejak aktivitas tidak pernah dihapus dari server
     }
     const c = JSON.stringify(cfgRow(db.cfg || {}));
@@ -116,7 +129,7 @@
   }
 
   const Data = {
-    user: null, role: 'pending', onError: null, onStatus: null, status: 'ok',
+    user: null, role: 'pending', onError: null, onStatus: null, status: 'ok', lastError: null,
     _st(s) { Data.status = s; if (Data.onStatus) Data.onStatus(s); },
     canWrite: () => ['admin', 'pengurus'].includes(Data.role),
 
@@ -149,9 +162,21 @@
       if (error) throw error;
       return data.session ? null : 'Akun dibuat. Periksa email untuk konfirmasi, lalu masuk.';
     },
+    // Otorisasi transaksi bernilai besar / pembatalan: verifikasi ulang kata sandi akun yang sedang masuk.
+    async reauth(password) {
+      if (!Data.user || !Data.user.email) throw new Error('Sesi tidak valid. Silakan masuk ulang.');
+      if (!password) throw new Error('Kata sandi wajib diisi.');
+      const { error } = await sb.auth.signInWithPassword({ email: Data.user.email, password });
+      if (error) throw new Error(/Invalid login/i.test(error.message) ? 'Kata sandi salah.' : error.message);
+    },
     async logout() { await sb.auth.signOut(); location.reload(); },
 
     async loadTable(db, k) {
+      if (k === 'vote' && Data.role === 'siswa') {   // akun Siswa tidak membaca tabel voting (suara rahasia); hanya rekap lewat voting_siswa() (migrasi 015)
+        db.vote = (await Data.voteSiswa()) || [];
+        snap[k] = new Map(db.vote.map(it => [it.id, JSON.stringify(toRow(k, it))]));
+        return db;
+      }
       db[k] = (await all(MAP[k])).map(r => fromRow(k, r));
       snap[k] = new Map(db[k].map(it => [it.id, JSON.stringify(toRow(k, it))]));
     },
@@ -161,15 +186,21 @@
       cfgExt = !!data && 'logo' in data; Data.cfgExt = cfgExt;
       cfgIns = !!data && 'instansi' in data; Data.cfgIns = cfgIns;
       cfgNip = !!data && 'kepsek_nip' in data; Data.cfgNip = cfgNip;
+      cfgBank = !!data && 'tutup_buku' in data; Data.cfgBank = cfgBank;
+      cfgApp = !!data && 'app_nama' in data; Data.cfgApp = cfgApp;
       db.cfg = { sekolah: c.sekolah || 'Nama Sekolah', tahun: c.tahun || '', walikelas: c.walikelas || '',
         iuran: Number(c.iuran) || 0, watab: c.wa_tab || '', waiuran: c.wa_iuran || '',
-        logo: c.logo || '', kepsek: c.kepsek || '', alamat: c.alamat || '', telp: c.telp || '', instansi: c.instansi || '', kepsek_nip: c.kepsek_nip || '' };
+        logo: c.logo || '', kepsek: c.kepsek || '', alamat: c.alamat || '', telp: c.telp || '', instansi: c.instansi || '', kepsek_nip: c.kepsek_nip || '', app_nama: c.app_nama || 'SekolahHub',
+        tutup: c.tutup_buku || '', saldomin: Number(c.saldo_min) || 0, limitotor: Number(c.limit_otor) || 0 };
       snapCfg = JSON.stringify(cfgRow(db.cfg));
     },
     // Muat semua tabel secara paralel
     async pull() {
       const db = {};
-      await Promise.all([...ORDER.map(k => Data.loadTable(db, k)), Data.loadCfg(db), Data.loadRekan(db), Data.probeWeekly()]);
+      // Probe migrasi lebih dulu: toRow() memakai Data.weekOk / Data.bankOk, jadi snapshot harus dibentuk setelah keduanya diketahui
+      // (bila tidak, database tanpa migrasi mengirim ulang semua baris pada push pertama).
+      await Promise.all([Data.probeWeekly(), Data.probeBank()]);
+      await Promise.all([...ORDER.map(k => Data.loadTable(db, k)), Data.loadCfg(db), Data.loadRekan(db)]);
       await signPhotos(db);
       return db;
     },
@@ -178,12 +209,33 @@
     async probeWeekly() {
       try { const { error } = await sb.from('iuran').select('minggu').limit(1); Data.weekOk = !error } catch (e) { Data.weekOk = false }
     },
+    // Migrasi 013: apakah kolom buku besar (ref, rev_of, ...) sudah ada. false = menu Keuangan berjalan tanpa fitur perbankan dan menampilkan petunjuk migrasi.
+    bankOk: null,
+    async probeBank() {
+      try { const { error } = await sb.from('tabungan').select('ref').limit(1); Data.bankOk = !error } catch (e) { Data.bankOk = false }
+    },
     // Akun Siswa: nama teman sekelas (id, nama, kelas) untuk menampilkan nama pengurus dan kandidat voting. Fungsi rekan_kelas() dari migrasi 011.
     // Gagal-diam bila migrasi belum dijalankan; db.rekan tidak pernah ikut disimpan ke server.
     async loadRekan(db) {
       db.rekan = [];
       if (Data.role !== 'siswa') return;
       try { const { data, error } = await sb.rpc('rekan_kelas'); if (!error && Array.isArray(data)) db.rekan = data; } catch (e) { /* abaikan */ }
+    },
+    // Voting akun Siswa. Mengembalikan daftar pemilihan untuk kelas siswa: {id, judul, open, kand, hitung:{kandidat:jumlah}, total, saya}.
+    // null bila migrasi 015 belum dijalankan atau jaringan gagal; Data.voteOk menyimpan statusnya.
+    voteOk: null,
+    async voteSiswa() {
+      try {
+        const { data, error } = await sb.rpc('voting_siswa');
+        Data.voteOk = !error && Array.isArray(data);
+        if (!Data.voteOk) return null;
+        return data.map(v => ({ id: v.id, judul: v.judul, open: !!v.open, kand: Array.isArray(v.kand) ? v.kand : [], suara: {}, hitung: v.hitung || {}, total: +v.total || 0, saya: v.saya || '' }));
+      } catch (e) { Data.voteOk = false; return null; }
+    },
+    // Beri suara atas nama akun yang sedang login. Siapa pemilihnya ditentukan server dari sesi, bukan dari kiriman aplikasi.
+    async beriSuara(id, kand) {
+      const { error } = await sb.rpc('beri_suara', { p_id: id, p_kand: kand });
+      if (error) throw new Error(/function .*beri_suara|schema cache/i.test(error.message) ? 'Fitur voting per akun belum aktif. Hubungi admin (migrasi 015).' : error.message);
     },
     // Muat ulang hanya tabel yang berubah (dipakai realtime)
     async refresh(db, tables) {
@@ -196,9 +248,9 @@
       const p = plan(db);
       const until = Date.now() + 4000; // abaikan gema realtime dari tulisan sendiri
       Object.keys(p.up).concat(Object.keys(p.del)).forEach(k => own.set(k === 'cfg' ? 'pengaturan' : MAP[k].table, until));
-      busy++; Data._st('saving');
+      busy++; Data._st('saving'); Data.lastError = null;
       chain = chain.then(() => run(p)).then(() => Data._st(busy > 1 ? 'saving' : 'ok'))
-        .catch(e => { Data._st('error'); if (Data.onError) Data.onError(e); })
+        .catch(e => { Data.lastError = e; Data._st('error'); if (Data.onError) Data.onError(e); })
         .then(() => { busy--; lastPush = Date.now(); });
       return chain;
     },
@@ -286,6 +338,17 @@
     cfgExt: false,
     cfgIns: false,
     cfgNip: false,
+    cfgApp: false,
+    cfgBank: false,
+    // Data merek untuk layar masuk (sebelum login). null bila migrasi 014 belum dijalankan atau jaringan gagal.
+    async brandPublik() {
+      try {
+        if (!sb) return null;
+        const { data, error } = await sb.rpc('brand_publik');
+        if (error || !data) return null;
+        return { u: data.logo ? Data.logoUrl(data.logo) : '', n: data.sekolah || '', a: data.app_nama || '', i: data.instansi || '', ad: data.alamat || '', tl: data.telp || '' };
+      } catch (e) { return null; }
+    },
     logoUrl(p) { return p ? sb.storage.from('logo-sekolah').getPublicUrl(p).data.publicUrl : ''; },
     async uploadLogo(blob) {
       const path = 'logo-' + Date.now() + '.png';

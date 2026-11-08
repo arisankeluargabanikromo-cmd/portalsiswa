@@ -5,8 +5,8 @@
      2. Beranda   : kartu + ringkasan profil siswa, orang tua, dan wali (desktop), lalu ringkasan portal bawaan
      3. Keuangan  : Tabungan, Kas Kelas, Iuran, Pengingat
      4. Kelas     : Data Siswa, Struktur Kelas, Absensi, Agenda, Pengumuman, Voting
-   Semua data yang tampil sudah dibatasi di database (RLS): siswa hanya menerima data dirinya sendiri; kas, struktur, dan voting bersifat umum
-   (migrasi 011). Tidak ada tombol tulis di sini. app.js memilih tampilan ini lewat vw() hanya bila Data.role == 'siswa'. */
+   Semua data yang tampil sudah dibatasi di database (RLS): siswa hanya menerima data dirinya sendiri; kas dan struktur bersifat umum
+   (migrasi 011); voting hanya lewat rekap voting_siswa() dan beri_suara() (migrasi 015, suara rahasia). Tidak ada tombol tulis di sini. app.js memilih tampilan ini lewat vw() hanya bila Data.role == 'siswa'. */
 (() => {
   'use strict';
 
@@ -86,32 +86,38 @@ ${g('Orang tua', f('Ayah', s.ayah) + f('Ibu', s.ibu) + f('Pekerjaan', s.pkj))}${
   + `<div class='gr3'>${DC.gauge(att, 'var(--pr)', 'Kehadiran', ab.length ? ac('H') + ' dari ' + ab.length + ' hari hadir' : 'Belum ada absensi')}${DC.gauge(iu, 'var(--ac)', 'Iuran bulan ini', nom ? nL + ' dari ' + ws.length + ' minggu lunas' : 'Nominal belum diatur')}${DC.gauge(mn, 'var(--inf)', 'Menabung', m6.filter(m => tS(m, 'setor') > 0).length + ' dari 6 bulan')}</div>`)}</div>
 <div class='col3'>${pnl('Terbaru', inf ? fd(inf.tgl) : '', (inf ? `<div class='lt'><small>Pengumuman terbaru</small><div class='cy'>${esc(inf.judul)}</div><div class='lab'>${esc(String(inf.isi || '').slice(0, 90))}</div></div>` : '') + (ag[0] ? `<div class='lt'><small>Agenda berikutnya · ${fd(ag[0].tgl)}</small><div class='cy'>${esc(ag[0].judul)}</div><div class='lab'>${esc(ag[0].ket)}</div></div>` : '') || empty('Belum ada pengumuman atau agenda.'))}${pnl('Status Iuran', 'bulan ini', nom ? donut([{ n: 'Lunas', v: nL, c: 'var(--ok)' }, { n: 'Sebagian', v: nS, c: 'var(--ac)' }, { n: 'Belum', v: nB, c: 'var(--er)' }], 'Belum ada minggu jatuh tempo bulan ini.') : empty('Nominal iuran belum diatur.'))}${pnl('Rekap Kehadiran', BLF[+m0.slice(5) - 1], donut([{ n: 'Hadir', v: ac('H'), c: 'var(--ok)' }, { n: 'Sakit', v: ac('S'), c: 'var(--inf)' }, { n: 'Izin', v: ac('I'), c: 'var(--ac)' }, { n: 'Alpa', v: ac('A'), c: 'var(--er)' }], 'Belum ada absensi bulan ini.'))}</div>
 </div>
-<div class='chg'>${pn('Transaksi terbaru', 'tabungan Anda', tx.length ? tx.map(t => `<div class='item'>${t.jenis == 'setor' ? 'Setoran' : 'Penarikan'}<span class='${t.jenis == 'setor' ? 'in' : 'out'}' style='float:right'>${t.jenis == 'setor' ? '+' : '−'}${rp(t.jml)}</span><div class='lab'>${fd(t.tgl)} · ${esc(t.cat || (t.jenis == 'setor' ? 'setor' : 'tarik'))}</div></div>`).join('') : empty('Belum ada transaksi.'))}${pn('Agenda mendatang', ag.length + ' agenda', ag.length ? ag.slice(0, 4).map(a => `<div class='item'><b>${esc(a.judul)}</b><div class='lab'>${fd(a.tgl)}${a.ket ? ' · ' + esc(a.ket) : ''}</div></div>`).join('') : empty('Belum ada agenda mendatang.'))}</div>`;
+<div class='chg'>${pn('Transaksi terbaru', 'tabungan Anda', tx.length ? tx.map(t => `<div class='item'>${t.jenis == 'setor' ? 'Setoran' : 'Penarikan'}<span style='float:right'>${BK.tabAmt(t)}</span><div class='lab'>${fd(t.tgl)} · ${esc(t.cat || (t.jenis == 'setor' ? 'setor' : 'tarik'))}</div></div>`).join('') : empty('Belum ada transaksi.'))}${pn('Agenda mendatang', ag.length + ' agenda', ag.length ? ag.slice(0, 4).map(a => `<div class='item'><b>${esc(a.judul)}</b><div class='lab'>${fd(a.tgl)}${a.ket ? ' · ' + esc(a.ket) : ''}</div></div>`).join('') : empty('Belum ada agenda mendatang.'))}</div>`;
   }
   const portalView = () => top() + analitik();
 
   /* ================= 3. Keuangan ================= */
+  /* Tabungan dan Kas Kelas memakai gaya rekening koran (statement.js): kolom tanggal & waktu, referensi, debit, kredit, saldo. */
+  const tag = st => st != 'Berhasil' ? `<span class='lab'><span class='tag vd'>${st}</span></span>` : '';
   function tabungan() {
     const s = ME(); if (!s) return noMe('Tabungan');
-    const tx = db.tab.filter(t => t.sid == s.id).sort((a, b) => a.tgl.localeCompare(b.tgl));
-    let run = 0; const rows = tx.map(t => { run += (t.jenis == 'setor' ? 1 : -1) * t.jml; return { t, bal: run } }).reverse();
-    const ts = sum(tx.filter(t => t.jenis == 'setor'), t => t.jml), tt = sum(tx.filter(t => t.jenis == 'tarik'), t => t.jml), sd = ts - tt, tg = +s.target || 0;
-    const pct = tg ? Math.max(0, Math.min(100, Math.round(sd / tg * 100))) : 0;
+    const u = BK.u, led = u.ledger(s.id), rs = u.revs(db.tab), tx = db.tab.filter(t => t.sid == s.id);
+    const ts = sum(tx, t => Math.max(0, u.efT(t))), tt = sum(tx, t => Math.max(0, -u.efT(t))), sd = ts - tt, tg = +s.target || 0, pct = tg ? Math.max(0, Math.min(100, Math.round(sd / tg * 100))) : 0;
+    const rows = led.slice().reverse().map(x => { const t = x.t, e = u.efT(t), st = u.stat(t, rs);
+      return { cls: st == 'Dibatalkan' ? 'void' : '', c: [{ h: ST.dt(t.tgl, t.waktu), c: 'd' }, t.ref ? u.rf(t.ref) : '', `<b class='nm'>${BK.tabLbl(t)}</b>${t.cat ? `<span class='lab'>${esc(t.cat)}</span>` : ''}${tag(st)}`,
+        e > 0 ? `<span class='in'>+${rp(e)}</span>` : '', e < 0 ? `<span class='out'>−${rp(-e)}</span>` : '', rp(x.bal)] } });
     return head('Tabungan', 'Saldo dan riwayat tabungan Anda. Setoran dan penarikan dicatat oleh admin atau pengurus.')
-      + `<div class='grid'><div class='card'><div class='lab'>Saldo tabungan</div><div class='big hero'>${rp(sd)}</div>${tg ? `<div class='meter'><i style='width:${pct}%'></i></div><div class='lab'>Target ${rp(tg)} · ${pct}%</div>` : ''}</div>`
-      + stat('Total setoran', rp(ts), tx.filter(t => t.jenis == 'setor').length + ' kali menyetor', 'in') + stat('Total penarikan', rp(tt), '', 'out') + `</div>`
-      + `<div class='swb'><button type='button' class='p' onclick="A.buku('${s.id}')">Buku tabungan</button></div>`
+      + ST.sum([{ l: 'Saldo tabungan', v: rp(sd), s: tg ? `Target ${rp(tg)} · ${pct}%` : u.noRek(s), c: 'hero' }, { l: 'Total kredit (setoran)', v: rp(ts), s: tx.filter(t => t.jenis == 'setor' && !t.rev_of).length + ' kali menyetor', c: 'in' }, { l: 'Total debit (penarikan)', v: rp(tt), c: 'out' }])
+      + `<div class='swb'><button type='button' class='p' onclick="A.buku('${s.id}')">Rekening koran &amp; cetak</button></div>`
       + pn('Perkembangan saldo', '6 bulan terakhir', trendSvg(s.id, 170)).replace("<div class='card'>", "<div class='card' style='margin-bottom:14px'>")
-      + `<div class='card'><h3>Riwayat transaksi</h3>${tbl(['Tanggal', 'Jenis', '>Jumlah', 'Catatan', '>Saldo'], rows.map(x => `<tr><td>${fd(x.t.tgl)}</td><td>${x.t.jenis == 'setor' ? 'Setor' : 'Tarik'}</td><td class='r ${x.t.jenis == 'setor' ? 'in' : 'out'}'>${x.t.jenis == 'setor' ? '+' : '−'}${rp(x.t.jml)}</td><td>${esc(x.t.cat)}</td><td class='r'>${rp(x.bal)}</td></tr>`), 'Belum ada transaksi tabungan.')}</div>`;
+      + `<div class='card stcard'>${ST.t([['Tanggal &amp; Waktu', 'tgl'], ['No. Referensi', 'ref'], ['Uraian', 'ket'], ['Kredit', 'kre', 'r'], ['Debit', 'deb', 'r'], ['Saldo', 'sal', 'r']], rows, { empty: 'Belum ada transaksi tabungan.' })}</div>`;
   }
 
   function kas() {
-    const l = db.kas.slice().sort((a, b) => b.tgl.localeCompare(a.tgl)), i = sum(l.filter(k => k.jenis == 'masuk'), k => k.jml), o = sum(l.filter(k => k.jenis == 'keluar'), k => k.jml);
+    const u = BK.u, L = u.kasL(), rs = u.revs(db.kas), i = sum(db.kas, k => Math.max(0, u.efK(k))), o = sum(db.kas, k => Math.max(0, -u.efK(k)));
     const ks = [-5, -4, -3, -2, -1, 0].map(mk), f = (m, j) => sum(db.kas.filter(k => k.jenis == j && k.tgl.slice(0, 7) == m), k => k.jml);
+    const rows = L.slice().reverse().map(x => { const k = x.k, e = u.efK(k), st = u.stat(k, rs);
+      return { cls: st == 'Dibatalkan' ? 'void' : '', c: [{ h: ST.dt(k.tgl, k.waktu), c: 'd' }, k.ref ? u.rf(k.ref) : '', `<b class='nm'>${esc(k.ket)}</b>${k.kat ? `<span class='lab'>${esc(k.kat)}</span>` : ''}${tag(st)}`,
+        e > 0 ? `<span class='in'>+${rp(e)}</span>` : '', e < 0 ? `<span class='out'>−${rp(-e)}</span>` : '', rp(x.bal)] } });
     return head('Kas Kelas', 'Pemasukan dan pengeluaran kas kelas, terpisah dari tabungan. Hanya untuk dilihat.')
-      + `<div class='grid'>${stat('Pemasukan', rp(i), '', 'in')}${stat('Pengeluaran', rp(o), '', 'out')}${stat('Saldo kas', rp(i - o), '', 'hero')}</div>`
+      + ST.sum([{ l: 'Saldo kas', v: rp(i - o), c: 'hero' }, { l: 'Pemasukan', v: rp(i), c: 'in' }, { l: 'Pengeluaran', v: rp(o), c: 'out' }])
+      + `<div class='swb'><button type='button' onclick='A.cetakKas()'>Cetak buku kas bulan ini</button></div>`
       + `<div class='card' style='margin-bottom:14px'><div class='ch'><h3>Kas masuk dan keluar</h3><span class='lab'>6 bulan terakhir</span></div>${CH.bars(ks.map(mlab), [{ n: 'Masuk', c: 'var(--ok)', v: ks.map(m => f(m, 'masuk')) }, { n: 'Keluar', c: 'var(--er)', v: ks.map(m => f(m, 'keluar')) }])}</div>`
-      + `<div class='card'><h3>Catatan kas</h3>${tbl(['Tanggal', 'Jenis', 'Keterangan', '>Jumlah'], l.map(k => `<tr><td>${fd(k.tgl)}</td><td>${k.jenis == 'masuk' ? 'Masuk' : 'Keluar'}</td><td>${esc(k.ket)}</td><td class='r ${k.jenis == 'masuk' ? 'in' : 'out'}'>${rp(k.jml)}</td></tr>`), 'Belum ada catatan kas.')}${l.length ? '' : hint}</div>`;
+      + `<div class='card stcard'>${ST.t([['Tanggal &amp; Waktu', 'tgl'], ['No. Bukti', 'ref'], ['Uraian', 'ket'], ['Masuk', 'kre', 'r'], ['Keluar', 'deb', 'r'], ['Saldo', 'sal', 'r']], rows, { empty: 'Belum ada catatan kas.' })}${L.length ? '' : hint}</div>`;
   }
 
   let SIM = today().slice(0, 7);   // bulan yang ditampilkan di halaman Iuran
@@ -124,11 +130,12 @@ ${g('Orang tua', f('Ayah', s.ayah) + f('Ibu', s.ibu) + f('Pekerjaan', s.pkj))}${
     const mt = sum(ws, pay), yr = sum(db.iuran.filter(i => i.sid == s.id && i.bulan.slice(0, 4) == y), i => i.jml), nl = ws.filter(w => st(w) == 'lunas').length;
     const now = ws.includes(cw), curTxt = now ? { lunas: 'Lunas', sebagian: 'Sebagian', belum: 'Belum bayar', nanti: '-' }[st(cw)] : nl + '/' + ws.length + ' minggu lunas';
     const list = db.iuran.filter(i => i.sid == s.id && (ws.includes(i.minggu) || (!i.minggu && i.bulan == SIM))).sort((a, b) => (b.minggu || b.bulan).localeCompare(a.minggu || a.bulan) || b.tgl.localeCompare(a.tgl));
+    const hrows = list.map(i => ({ cls: i.rev_of ? 'void' : '', c: [{ h: ST.dt(i.tgl, i.waktu), c: 'd' }, i.ref ? BK.ref(i.ref) : '', i.minggu ? 'Mg ' + wkNo(i.minggu) + ' (' + esc(wkRange(i.minggu)) + ')' : 'Iuran bulanan (lama)', BK.iurAmt(i), esc(i.cat)] }));
     return head('Iuran', 'Status pembayaran iuran kelas Anda per minggu. Pembayaran dicatat oleh admin atau pengurus dan otomatis masuk ke Kas Kelas.')
-      + `<div class='grid'>${stat('Iuran per minggu', nom ? rp(nom) : 'Belum diatur', '')}${stat('Terkumpul ' + ml, rp(mt), 'Tahun ' + y + ': ' + rp(yr), 'hero')}${stat(now ? 'Status minggu ini' : ml, curTxt, now && st(cw) == 'sebagian' && nom ? 'Kurang ' + rp(Math.max(0, nom - pay(cw))) : now ? wkRange(cw) : '', now && st(cw) == 'lunas' ? 'in' : '')}</div>`
+      + ST.sum([{ l: 'Iuran per minggu', v: nom ? rp(nom) : 'Belum diatur' }, { l: 'Terkumpul ' + ml, v: rp(mt), s: 'Tahun ' + y + ': ' + rp(yr), c: 'hero' }, { l: now ? 'Status minggu ini' : ml, v: curTxt, s: now && st(cw) == 'sebagian' && nom ? 'Kurang ' + rp(Math.max(0, nom - pay(cw))) : now ? wkRange(cw) : '', c: now && st(cw) == 'lunas' ? 'in' : '' }])
       + `<div class='swn' role='group' aria-label='Pilih bulan'><button type='button' onclick='SWV.im(-1)' aria-label='Bulan sebelumnya'>‹</button><b>${ml}</b><button type='button' onclick='SWV.im(1)' aria-label='Bulan berikutnya'>›</button></div>`
       + `<div class='swm-g'>${ws.map((w, i) => { const k = st(w), p = pay(w); return `<div class='swm st-${k}'><b>Mg ${i + 1}</b><span>${LB[k]}</span><small>${esc(wkRange(w))}</small><small>${p ? rp(p) : '&nbsp;'}</small></div>` }).join('')}</div>`
-      + `<div class='card'><h3>Riwayat pembayaran ${ml}</h3>${tbl(['Tanggal bayar', 'Untuk minggu', '>Jumlah', 'Catatan'], list.map(i => `<tr><td>${fd(i.tgl)}</td><td>${i.minggu ? 'Mg ' + wkNo(i.minggu) + ' (' + esc(wkRange(i.minggu)) + ')' : 'Iuran bulanan (lama)'}</td><td class='r in'>${rp(i.jml)}</td><td>${esc(i.cat)}</td></tr>`), 'Belum ada pembayaran iuran di bulan ini.')}</div>`;
+      + `<div class='sth2'><h3>Riwayat pembayaran ${ml}</h3></div><div class='card stcard'>${ST.t([['Tanggal &amp; Waktu', 'tgl'], ['No. Referensi', 'ref'], ['Untuk minggu', 'per'], ['Jumlah', 'amt', 'r'], ['Catatan', 'cat']], hrows, { empty: 'Belum ada pembayaran iuran di bulan ini.' })}</div>`;
   }
 
   // Pengingat khusus siswa: status diri sendiri (pengingat WhatsApp ke wali dikirim admin/pengurus)
@@ -207,22 +214,62 @@ ${g('Orang tua', f('Ayah', s.ayah) + f('Ibu', s.ibu) + f('Pekerjaan', s.pkj))}${
       + `<div class='card'>${l.length ? l.map(a => `<div class='swi'>${dateChip(a)}<div><b>${esc(a.judul)}</b><div class='lab'>${fd(a.tgl)}</div><div class='swi-t'>${esc(a.isi)}</div></div></div>`).join('') : empty('Belum ada pengumuman.')}</div>`;
   }
 
+  /* Voting per akun: siswa memilih sendiri; server (beri_suara) menentukan pemilih dari sesi login.
+     Hasil rekap baru tampil setelah pemilihan ditutup agar tidak memengaruhi pilihan; suara rahasia, tidak ada daftar siapa memilih siapa. */
+  let VSEL = {}, vLast = 0;
+  function vsync() {   // RLS tidak mengirim peristiwa realtime ke akun Siswa, jadi segarkan berkala saat halaman dibuka
+    if (Date.now() - vLast < 15000) return; vLast = Date.now();
+    Data.voteSiswa().then(l => { if (l && JSON.stringify(l) !== JSON.stringify(db.vote) && !$('#dlg').open) { db.vote = l; go() } });
+  }
   function voting() {
-    const s = ME(), tot = (db.rekan || []).length || db.siswa.length;
-    return head('Voting', 'Pemilihan ketua kelas atau keputusan bersama. Suara dicatat oleh admin atau pengurus; di sini Anda melihat hasilnya.')
-      + (db.vote.length ? db.vote.map(v => {
-        const c = {}; Object.values(v.suara || {}).forEach(k => c[k] = (c[k] || 0) + 1);
-        const n = Object.keys(v.suara || {}).length, mine = s ? (v.suara || {})[s.id] : '', mx = Math.max(0, ...v.kand.map(k => c[k] || 0));
-        return `<div class='card' style='margin-bottom:12px'><h3>${esc(v.judul)} <span class='tag'>${v.open ? 'Dibuka' : 'Ditutup'}</span></h3>`
-          + v.kand.map(k => `<div class='swv'><span>${esc(nm(k))}${mine == k ? " <span class='tag'>Pilihan Anda</span>" : ''}${!v.open && mx && (c[k] || 0) == mx ? " <span class='tag'>Unggul</span>" : ''}</span><span><b>${c[k] || 0}</b> suara · ${n ? Math.round((c[k] || 0) / n * 100) : 0}%</span></div><div class='meter'><i style='width:${n ? (c[k] || 0) / n * 100 : 0}%'></i></div>`).join('')
-          + `<div class='lab'>${n} dari ${tot} siswa sudah memilih · ${mine ? 'Anda sudah memberikan suara' : v.open ? 'Anda belum memberikan suara' : 'Anda tidak memberikan suara'}</div></div>`;
-      }).join('') : `<div class='card'>${empty('Belum ada pemilihan.')}${hint}</div>`);
+    const s = ME(); vsync();
+    const intro = head('Voting', 'Pilih satu kandidat dari akun Anda. Satu akun satu suara, rahasia, dan tidak dapat diubah setelah dikirim.');
+    if (!s) return noMe('Voting');
+    if (Data.voteOk === false) return intro + `<div class='card'>${empty('Fitur voting per akun belum aktif.')}<div class='lab' style='margin-top:6px'>Hubungi admin sekolah (perlu pembaruan database 015).</div></div>`;
+    const tot = (db.rekan || []).length || 1;
+    return intro + (db.vote.length ? db.vote.map(v => {
+      const c = v.hitung || {}, n = v.total || 0, mine = v.saya || '', mx = Math.max(0, ...v.kand.map(k => c[k] || 0)), sel = VSEL[v.id] || '';
+      const st = !v.open ? 'Anda ' + (mine ? 'sudah memberikan suara' : 'tidak memberikan suara') : mine ? 'Suara Anda sudah tercatat' : 'Anda belum memberikan suara';
+      let body;
+      if (v.open && !mine) {
+        body = `<div role='radiogroup' aria-label='Pilih kandidat ${esc(v.judul)}'>${v.kand.map(k => `<button type='button' class='vopt' role='radio' aria-checked='${sel == k}' data-vk='${esc(k)}' onclick=\"SWV.pilih('${v.id}','${esc(k)}',this)\"><span class='dot'></span><span>${esc(nm(k))}</span></button>`).join('')}</div>`
+          + `<button type='button' class='p vgo' id='vg-${v.id}' ${sel ? '' : 'disabled'} onclick=\"SWV.kirim('${v.id}')\">Kirim suara</button>`;
+      } else if (v.open) {
+        body = `<div class='vdone'><b>Terima kasih, suara Anda sudah tercatat.</b><div class='lab'>Pilihan Anda: ${esc(nm(mine))}. Hasil ditampilkan setelah pemilihan ditutup.</div></div>`;
+      } else {
+        body = v.kand.map(k => `<div class='swv'><span>${esc(nm(k))}${mine == k ? " <span class='tag'>Pilihan Anda</span>" : ''}${mx && (c[k] || 0) == mx ? " <span class='tag'>Unggul</span>" : ''}</span><span><b>${c[k] || 0}</b> suara · ${n ? Math.round((c[k] || 0) / n * 100) : 0}%</span></div><div class='meter'><i style='width:${n ? (c[k] || 0) / n * 100 : 0}%'></i></div>`).join('');
+      }
+      return `<div class='card' style='margin-bottom:12px'><h3>${esc(v.judul)} <span class='tag'>${v.open ? 'Dibuka' : 'Ditutup'}</span></h3>${body}<div class='lab' style='margin-top:10px'>${n} dari ${tot} siswa sudah memilih · ${st}</div></div>`;
+    }).join('') : `<div class='card'>${empty('Belum ada pemilihan untuk kelas Anda.')}</div>`);
   }
 
   /* ================= API ================= */
   window.SWV = {
     hero,
     v: { portal: portalView, tabungan, kas, iuran, pengingat, siswa, struktur, absensi, agenda, pengumuman, voting },
+    pilih(id, k, el) {
+      VSEL[id] = k; const g = el.parentElement;
+      g.querySelectorAll('.vopt').forEach(b => b.setAttribute('aria-checked', b === el));
+      const go_ = document.getElementById('vg-' + id); if (go_) go_.disabled = false;
+    },
+    kirim(id) {
+      const v = db.vote.find(x => x.id == id), k = VSEL[id]; if (!v || !k) return;
+      const d = $('#dlg');
+      d.innerHTML = `<h3>Kirim suara?</h3><p>Anda memilih <b>${esc(nm(k))}</b> pada pemilihan <b>${esc(v.judul)}</b>.</p><p class='lab'>Suara bersifat rahasia dan tidak dapat diubah setelah dikirim.</p><div class='acts'><button id='vx' type='button'>Periksa lagi</button><button class='p' id='vok' type='button'>Kirim suara</button></div>`;
+      d.showModal();
+      $('#vx').onclick = () => d.close();
+      $('#vok').onclick = async () => {
+        const b = $('#vok'); b.disabled = true; b.textContent = 'Mengirim…';
+        try {
+          await Data.beriSuara(id, k); delete VSEL[id]; vLast = Date.now();
+          const l = await Data.voteSiswa(); if (l) db.vote = l;
+          d.close(); toast('Suara Anda tercatat'); go();
+        } catch (e) {
+          d.close(); toast(e.message || 'Gagal mengirim suara');
+          const l = await Data.voteSiswa(); if (l) { db.vote = l; go() }
+        }
+      };
+    },
     im(d) { const x = new Date(+SIM.slice(0, 4), +SIM.slice(5) - 1 + d, 1); SIM = isoD(x).slice(0, 7); go() },
     m(d) { const y = +SM.slice(0, 4), m = +SM.slice(5) - 1 + d, x = new Date(y, m, 1); SM = x.getFullYear() + '-' + pad(x.getMonth() + 1); go() }
   };

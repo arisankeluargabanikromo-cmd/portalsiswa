@@ -3,8 +3,9 @@
    $, esc, rp, fd, today, toast, logA, ico, sis, saldo, total, kelasList, csv, WA_TAB, WA_IUR. */
 (() => {
   'use strict';
-  const VER = '2.10.0';
+  const VER = '2.14.0';
   const adm = () => Data.role == 'admin';
+  const NUMK = ['iuran', 'saldomin', 'limitotor'];   // kolom konfigurasi bertipe angka
   const ROLE = ROLEL;
   /* Koleksi data yang dapat dihapus. DEP = ikut terhapus bila data siswa dihapus. */
   const COLL = [['siswa', 'Data siswa'], ['tab', 'Transaksi tabungan'], ['iuran', 'Pembayaran iuran'], ['absensi', 'Absensi'], ['kas', 'Kas kelas'], ['agenda', 'Agenda'], ['info', 'Pengumuman'], ['vote', 'Voting'], ['struktur', 'Struktur kelas']];
@@ -73,17 +74,19 @@
     h += sec('umum', head('umum', 'Umum', 'Identitas sekolah yang tampil di menu, layar masuk, dan cetakan.')
       + `<div class='lgr'><div class='lgp' id='lgp'>${Brand.tile(88)}</div><div class='lgi'><b>Logo sekolah</b><p class='lab'>PNG, JPG, atau WebP. Otomatis diperkecil. Tampil di menu samping, layar masuk, ikon tab, dan cetakan.</p>`
       + (a ? `<div class='pbar'><button type='button' class='p' onclick='A.logo()' ${ext ? '' : 'disabled'}>Unggah logo</button><button type='button' class='d' id='lgd' onclick='A.logoDel()' ${c.logo ? '' : 'hidden'}>Hapus</button></div>` : '')
+      + (a && ext && !Data.cfgApp ? note('Nama aplikasi yang dapat diubah dan logo di layar masuk pada perangkat baru butuh migrasi <b>014</b> di Supabase. Lihat README, bagian Layar masuk.') : '')
       + (a && ext && !Data.cfgNip ? note('NIP kepala sekolah pada tanda tangan kartu ID butuh migrasi <b>009</b> di Supabase. Lihat README, bagian Kartu ID siswa.') : '')
       + (a && ext && !Data.cfgIns ? note('Kop instansi pada kartu ID butuh migrasi <b>008</b> di Supabase. Lihat README, bagian Kartu ID siswa.') : '')
       + (a && !ext ? note('Fitur logo dan kolom tambahan butuh migrasi <b>007</b> di Supabase. Lihat README, bagian Pengaturan.') : '') + `</div></div>`
-      + `<div class='fg'>${inp('sekolah', 'Nama sekolah')}${Data.cfgIns ? inp('instansi', 'Instansi induk (kop kartu ID)', { ph: 'PEMERINTAH KABUPATEN MADIUN' }) : ''}${inp('tahun', 'Tahun ajaran', { ph: '2026/2027' })}${inp('walikelas', 'Wali kelas')}${ext ? inp('kepsek', 'Kepala sekolah') + (Data.cfgNip ? inp('kepsek_nip', 'NIP kepala sekolah', { ph: '196501011990031001' }) : '') + inp('telp', 'Telepon', { t: 'tel' }) + `<label>Alamat<textarea data-cfg='alamat' rows='2' ${a ? '' : 'disabled'}>${esc(c.alamat)}</textarea></label>` : ''}</div>`);
+      + `<div class='fg'>${Data.cfgApp ? inp('app_nama', 'Nama aplikasi', { ph: 'SekolahHub' }) : ''}${inp('sekolah', 'Nama sekolah')}${Data.cfgIns ? inp('instansi', 'Instansi induk (kop kartu ID)', { ph: 'PEMERINTAH KABUPATEN MADIUN' }) : ''}${inp('tahun', 'Tahun ajaran', { ph: '2026/2027' })}${inp('walikelas', 'Wali kelas')}${ext ? inp('kepsek', 'Kepala sekolah') + (Data.cfgNip ? inp('kepsek_nip', 'NIP kepala sekolah', { ph: '196501011990031001' }) : '') + inp('telp', 'Telepon', { t: 'tel' }) + `<label>Alamat<textarea data-cfg='alamat' rows='2' ${a ? '' : 'disabled'}>${esc(c.alamat)}</textarea></label>` : ''}</div>`);
 
     /* Keuangan */
     h += sec('keuangan', head('keuangan', 'Keuangan', 'Iuran kelas dan pesan pengingat untuk wali murid.')
-      + `<div class='fg'>${inp('iuran', 'Iuran kelas per minggu (Rp)', { t: 'number' })}</div>`
+      + `<div class='fg'>${inp('iuran', 'Iuran kelas per minggu (Rp)', { t: 'number' })}${Data.cfgBank ? inp('saldomin', 'Saldo mengendap minimal tabungan (Rp)', { t: 'number', ph: '0' }) + inp('limitotor', 'Batas otorisasi kata sandi (Rp)', { t: 'number', ph: '0 = nonaktif' }) : ''}</div>`
+      + (Data.cfgBank ? `<p class='lab'>Saldo mengendap: penarikan tidak boleh menyisakan saldo di bawah nilai ini (kecuali layanan Tutup rekening). Batas otorisasi: penarikan dan pengeluaran kas sebesar nilai ini atau lebih meminta kata sandi akun. Pembatalan transaksi selalu meminta kata sandi. ${db.cfg.tutup ? `Buku ditutup sampai <b>${fd(db.cfg.tutup)}</b> (diatur di menu Tabungan, tab Penutupan harian).` : 'Tutup buku diatur di menu Tabungan, tab Penutupan harian.'}</p>` : adm() && Data.bankOk === false ? note('Fitur perbankan (buku besar, nomor referensi, tutup buku) butuh migrasi <b>013</b> di Supabase. Lihat README, bagian Keuangan standar perbankan.') : adm() ? note('Pengaturan perbankan butuh migrasi <b>013</b> di Supabase. Lihat README, bagian Keuangan standar perbankan.') : '')
       + `<label>Pesan pengingat tabungan<textarea data-cfg='watab' rows='3' placeholder='${esc(WA_TAB)}' ${a ? '' : 'disabled'}>${esc(c.watab)}</textarea></label>`
       + `<label>Pesan pengingat iuran<textarea data-cfg='waiuran' rows='3' placeholder='${esc(WA_IUR)}' ${a ? '' : 'disabled'}>${esc(c.waiuran)}</textarea></label>`
-      + (a ? `<p class='lab'>Ketuk kata kunci untuk menyisipkannya ke pesan. Kosongkan pesan untuk memakai teks bawaan.</p><div class='chips'>${['{nama}', '{kelas}', '{sekolah}', '{saldo}', '{bulan}', '{nominal}', '{kekurangan}'].map(t => `<button type='button' class='s chip' onclick="A.ins('${t}')">${t}</button>`).join('')}</div>` : ''));
+      + (a ? `<p class='lab'>Ketuk kata kunci untuk menyisipkannya ke pesan. Kosongkan pesan untuk memakai teks bawaan.</p><div class='chips'>${['{nama}', '{kelas}', '{sekolah}', '{saldo}', '{bulan}', '{nominal}', '{kekurangan}', '{tunggakan}', '{minggu_tunggak}'].map(t => `<button type='button' class='s chip' onclick="A.ins('${t}')">${t}</button>`).join('')}</div>` : ''));
 
     /* Hak akses */
     if (a) h += sec('akses', head('akses', 'Hak akses', 'Aturan ditegakkan di database (RLS), bukan hanya di tampilan. Akun baru berstatus Menunggu sampai admin menyetujui dan, untuk siswa atau orang tua, menautkannya ke data siswa.')
@@ -106,7 +109,7 @@
 
     /* Akun */
     h += sec('akun', head('akun', 'Akun', 'Keamanan dan informasi aplikasi.')
-      + kv('Email', esc(Data.user && Data.user.email || '')) + kv('Peran', ROLE[Data.role] || esc(Data.role)) + kv('Versi aplikasi', 'SekolahHub ' + VER)
+      + kv('Email', esc(Data.user && Data.user.email || '')) + kv('Peran', ROLE[Data.role] || esc(Data.role)) + kv('Versi aplikasi', esc(Brand.name()) + ' ' + VER)
       + kv('Sinkronisasi', { ok: 'Tersimpan', saving: 'Menyimpan…', error: 'Gagal menyimpan', offline: 'Offline' }[Data.status] || 'Tersimpan')
       + `<div class='pbar' style='margin-top:14px'><button type='button' onclick='A.sandi()'>Ganti kata sandi</button><a class='btn' href='#aktivitas'>Riwayat aktivitas</a><button type='button' class='d' onclick='Data.logout()'>Keluar</button></div>`);
 
@@ -123,8 +126,8 @@
   /* ---------- Perilaku halaman ---------- */
   const PG = window.PG = {
     chk() { const els = [...document.querySelectorAll('#app [data-cfg]')]; SD = els.some(e => PG.val(e) !== PG.cur(e.dataset.cfg)); const s = $('#sv'); if (s) s.hidden = !SD },
-    val(e) { return e.dataset.cfg == 'iuran' ? String(+e.value || 0) : e.value.trim() },
-    cur(k) { return k == 'iuran' ? String(+db.cfg.iuran || 0) : String(db.cfg[k] || '').trim() },
+    val(e) { return NUMK.includes(e.dataset.cfg) ? String(+e.value || 0) : e.value.trim() },
+    cur(k) { return NUMK.includes(k) ? String(+db.cfg[k] || 0) : String(db.cfg[k] || '').trim() },
     jump(id) { const e = document.getElementById('st-' + id); if (e) e.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion:reduce)').matches ? 'auto' : 'smooth', block: 'start' }) },
     init() {
       const app = $('#app');
@@ -167,8 +170,9 @@
   Object.assign(A, {
     cfgSave() {
       if (!adm()) return toast('Hanya admin yang dapat mengubah pengaturan');
-      const o = {}; document.querySelectorAll('#app [data-cfg]').forEach(e => { o[e.dataset.cfg] = e.dataset.cfg == 'iuran' ? (+e.value || 0) : e.value.trim() });
+      const o = {}; document.querySelectorAll('#app [data-cfg]').forEach(e => { o[e.dataset.cfg] = NUMK.includes(e.dataset.cfg) ? (+e.value || 0) : e.value.trim() });
       if ('sekolah' in o && !o.sekolah) return toast('Nama sekolah wajib diisi');
+      if ('app_nama' in o) o.app_nama = (o.app_nama || 'SekolahHub').slice(0, 40);
       Object.assign(db.cfg, o); logA('Pengaturan sekolah diperbarui'); SD = false; save(); go(); toast('Pengaturan disimpan');
     },
     cfgUndo() { SD = false; go() },
@@ -199,7 +203,7 @@
       i.click();
     },
     logoDel() {
-      dlg(`<h3>Hapus logo?</h3><p>Logo diganti lambang bawaan SekolahHub di semua tempat.</p><div class='acts'><button id='x'>Batal</button><button class='p dng' id='ok'>Hapus logo</button></div>`, d => {
+      dlg(`<h3>Hapus logo?</h3><p>Logo diganti lambang bawaan aplikasi di semua tempat.</p><div class='acts'><button id='x'>Batal</button><button class='p dng' id='ok'>Hapus logo</button></div>`, d => {
         d.querySelector('#ok').onclick = () => { Data.dropLogo(db.cfg.logo); db.cfg.logo = ''; logA('Logo sekolah dihapus'); save(); d.close(); PG.paintLogo(); toast('Logo dihapus') };
       });
     },
