@@ -17,6 +17,10 @@ sekolahhub/
 │  ├─ js/pengaturan.js     ← halaman Pengaturan: identitas + logo, hak akses, data & cadangan, akun, reset
 │  ├─ js/import.js         ← impor data dari Excel (.xlsx) / CSV + template
 │  ├─ js/akun.js           ← manajemen akun: persetujuan terpandu, peran, tautan siswa, sambutan akun portal
+│  ├─ js/bank.js           ← menu Keuangan standar perbankan: tabungan, kas kelas, iuran (butuh migrasi 013)
+│  ├─ css/bank.css         ← kartu rekening, bukti transaksi (memakai token tema)
+│  ├─ js/statement.js      ← dokumen & tabel gaya rekening koran: kertas cetak, Laporan, tampilan Pengingat (v2.12)
+│  ├─ css/statement.css    ← pita ringkasan, tabel buku, kertas A4, tata letak ponsel dan @page cetak
 │  ├─ js/idcard.js         ← kartu ID siswa: pembuat QR, desain kartu, galeri, sistem cetak A4 / CR80
 │  ├─ vendor/fflate.min.js ← pustaka zip (MIT) untuk membaca/menulis .xlsx
 │  ├─ js/auth.js           ← layar masuk / daftar / menunggu persetujuan
@@ -27,7 +31,7 @@ sekolahhub/
 │  ├─ js/config.js         ← URL dan anon key Supabase
 │  └─ vendor/supabase.js   ← supabase-js 2.45.4 (di-host sendiri)
 ├─ supabase/schema.sql     ← tabel, aturan keamanan (RLS), peran
-├─ supabase/migrations/    ← migrasi untuk database yang sudah berjalan (006 = tema per akun, 007 = logo & identitas, 008 = kop instansi kartu ID, 009 = NIP kepala sekolah, 010 = akun siswa, 011 = akses menu siswa, 012 = iuran mingguan)
+├─ supabase/migrations/    ← migrasi untuk database yang sudah berjalan (006 = tema per akun, 007 = logo & identitas, 008 = kop instansi kartu ID, 009 = NIP kepala sekolah, 010 = akun siswa, 011 = akses menu siswa, 012 = iuran mingguan, 013 = standar perbankan)
 ├─ supabase/tests/         ← skrip uji keamanan (RLS)
 ├─ scripts/gen-config.js   ← menulis config.js dari environment variable
 ├─ vercel.json             ← build dan header keamanan
@@ -67,6 +71,55 @@ sekolahhub/
 - **Kartu ID siswa** (tab *Kartu ID* di Data Siswa): kartu pelajar berfoto ukuran CR80 dengan kode QR, siap cetak. Lihat bagian *Kartu ID siswa*.
 - **Pengingat WhatsApp:** daftar siswa yang belum menabung atau belum lunas iuran bulan ini, lengkap dengan tombol kirim yang membuka WhatsApp dengan pesan terisi. Isi pesan bisa diubah di Pengaturan. Bukti setoran juga bisa dikirim ke wali.
 - **Ekspor CSV** untuk data siswa, transaksi, dan rekap tabungan.
+
+## Keuangan standar perbankan (v2.11, migrasi 013)
+
+Menu **Tabungan**, **Kas Kelas**, **Iuran**, dan **Pengingat** mengikuti praktik aplikasi perbankan (alur ala BRImo). Aturan pentingnya ditegakkan **di database** lewat trigger (`013_perbankan.sql`), bukan hanya di tampilan.
+
+**Urutan pasang (penting):** jalankan `supabase/migrations/013_perbankan.sql` di SQL Editor **sebelum** men-deploy versi ini (instalasi baru sudah termasuk di `schema.sql`). Aman dijalankan ulang; data lama otomatis diberi nomor referensi. Tanpa migrasi, aplikasi tetap berjalan seperti v2.10 dan menampilkan petunjuk.
+
+| Standar | Perilaku |
+|---|---|
+| **Buku besar permanen** | Transaksi tabungan, pembayaran iuran, dan catatan kas manual **tidak bisa diubah atau dihapus** dari aplikasi. Kesalahan dikoreksi dengan **pembatalan (reversal)**: baris lawan bernilai negatif yang menunjuk transaksi asal. Transaksi asal tetap tampil berstatus *Dibatalkan*; satu transaksi hanya bisa dibatalkan sekali dan pembatalan tidak bisa dibatalkan. |
+| **Nomor referensi, waktu, petugas** | Setiap transaksi punya nomor unik (`TRX`/`IUR`/`KAS`/`REV` + yymmdd + 8 karakter), waktu pembukuan dari server, dan petugas (email disamarkan). |
+| **Alur transaksi** | Input → **konfirmasi** (rincian + saldo sebelum/sesudah) → **otorisasi kata sandi** → pembukuan → **bukti**. Bukti *Transaksi Berhasil* hanya tampil setelah server menerima; bila ditolak, tidak ada yang tercatat dan pesan alasannya ditampilkan. |
+| **Otorisasi** | Pembatalan selalu meminta kata sandi akun. Penarikan tabungan dan pengeluaran kas sebesar *Batas otorisasi* atau lebih juga meminta kata sandi (*Pengaturan → Keuangan*; 0 = nonaktif). Opname kas dengan selisih dan tutup buku juga meminta kata sandi. |
+| **Saldo mengendap** | *Pengaturan → Keuangan*. Penarikan tidak boleh menyisakan saldo di bawah nilai ini, kecuali layanan **Tutup rekening** (menarik seluruh saldo). Rekening bersaldo tidak bisa dihapus dari Data Siswa. |
+| **Saldo kas tidak minus** | Pengeluaran kas, pembatalan pemasukan kas, dan pembatalan iuran mingguan ditolak bila dananya sudah terpakai. |
+| **Pembatalan lintas hari** | Pengurus hanya bisa membatalkan transaksi yang dibukukan **hari yang sama**; transaksi hari sebelumnya hanya oleh admin. Pembatalan selalu bertanggal hari ini. |
+| **Tutup buku** | *Tabungan → Penutupan harian* (admin). Transaksi bertanggal sampai tanggal tutup buku ditolak untuk **semua** peran, termasuk admin; hanya *Buka kembali* (dengan alasan, tercatat di Aktivitas) yang bisa melonggarkannya. Tanggal di masa depan (lebih dari 1 hari) ditolak. |
+| **Hapus data** | `DELETE` pada buku besar hanya admin (untuk reset, pemulihan cadangan, urungkan impor). Menghapus siswa membersihkan tabungan dan iurannya lewat cascade. **Urungkan impor oleh pengurus kini ditolak server**; minta admin, atau batalkan transaksi satu per satu. |
+
+**Tabungan.** Tab *Rekening* (nomor rekening 12 digit diturunkan dari NIS, status Aktif/Dormant >90 hari), *Mutasi* (filter tanggal, jenis, pencarian referensi; kolom kredit/debit/status) dan *Penutupan harian* (rekap per hari + saldo akhir hari). **Mutasi Rekening** per siswa berupa kartu rekening (saldo bisa disembunyikan), saldo awal/akhir periode, mutasi per hari dengan saldo berjalan, dan **cetak rekening koran**. Setoran massal menghasilkan rekap dengan nomor batch.
+
+**Kas Kelas.** Buku kas per bulan dengan saldo awal, pemasukan, pengeluaran, saldo akhir, kategori, nomor bukti, **bukti kas (kwitansi dengan terbilang dan kolom tanda tangan)**, **cetak buku kas**, dan **opname kas** (bandingkan uang fisik dengan saldo buku; selisih dibukukan sebagai penyesuaian bertanda *Selisih kas*). Baris *Dari Iuran* dibuat otomatis dan hanya berubah lewat menu Iuran.
+
+**Iuran.** Matriks mingguan tetap ada, ditambah nomor tagihan, **kwitansi**, riwayat pembayaran dengan status, **tunggakan** per siswa (tombol *Bayar* memilih beberapa minggu sekaligus), indikator kolektibilitas (lancar / tunggakan 1–2 minggu / 3 minggu atau lebih), dan persentase kolektibilitas bulan berjalan. *Tunggakan* = minggu yang sudah lewat dan belum lunas, dihitung sejak minggu pertama yang pernah tercatat di sistem (atau sejak siswa masuk bila lebih baru), supaya iuran yang baru diaktifkan tidak menimbulkan tunggakan semu.
+
+**Pengingat.** Tab ketiga *Tunggakan iuran* dengan kata kunci pesan `{tunggakan}` dan `{minggu_tunggak}`; kolom saldo/kekurangan/tunggakan ditampilkan.
+
+**Catatan penting**
+- Ini sistem pembukuan untuk kelas/sekolah, bukan sistem perbankan berlisensi; **tidak ada uang yang dipindahkan** dan nomor rekening hanyalah label di aplikasi.
+- Kata sandi untuk otorisasi diverifikasi ulang ke Supabase Auth (tidak disimpan). Ini mengurangi salah klik dan pemakaian perangkat yang ditinggal terbuka, bukan pengganti kontrol akses peran.
+- Portal siswa dan orang tua tetap hanya-baca; kini menampilkan nomor referensi, dan baris pembatalan tampil jelas.
+- Saldo berjalan di tampilan dihitung berurutan menurut tanggal lalu waktu pembukuan; transaksi bertanggal mundur disisipkan sesuai tanggalnya.
+
+**Pengujian.** `supabase/tests/ledger_check.sql` (49 pemeriksaan: permanen, referensi unik, pembatalan, saldo mengendap, tutup buku, kas tidak minus, peran) dijalankan seperti uji lain: tempel di SQL Editor, Run, baca pesan *HASIL UJI BUKU BESAR* (error di akhir disengaja). Jalankan juga `security_check.sql` dan `akses_siswa_check.sql` setelah migrasi.
+
+## Tampilan keuangan gaya rekening koran (v2.12)
+
+Seluruh menu **Tabungan, Kas Kelas, Iuran, Pengingat, Laporan**, dan semua hasil cetak mengikuti format *Rekening Koran (Account Statement)* bank. Tidak ada migrasi database baru.
+
+| Bagian | Isi |
+|---|---|
+| **Kertas dokumen** | Kop sekolah + logo di kanan atas, judul tengah dua baris (mis. *Rekening Koran / Account Statement*), blok identitas (Periode Dari/Sampai, No. Rekening, Mata Uang, Kelas, Saldo Awal), tabel dengan pita header biru (Tanggal & Waktu, Tgl. Valuta, Uraian, No. Referensi, Debit, Kredit, Saldo), ringkasan saldo, tanda tangan, dan catatan kaki. Angka berformat `3.000.000,00`. |
+| **Dokumen** | Rekening koran siswa (Tabungan > Mutasi), Buku Kas Kelas, Laporan Rekap Tabungan, Laporan Iuran Kelas, rekap batch (setoran/iuran massal). |
+| **Laporan** | Tiga jenis (Tabungan, Kas Kelas, Iuran) dengan pratinjau kertas, filter periode dan kelas, **Cetak / PDF**, dan **Ekspor CSV** yang isinya sama dengan kertas. Saldo awal dan akhir dihitung per periode. |
+| **Cetak** | A4 portrait, header tabel berulang di tiap halaman, baris tidak terpotong, nomor halaman *Halaman X dari Y* lewat `@page` (Chrome/Edge 131 ke atas; peramban lain tetap mencetak tanpa nomor). Aktifkan *Grafik latar belakang* agar pita biru tercetak. Akun Siswa dan Hanya lihat juga bisa mencetak. |
+| **Layar desktop** | Pita ringkasan angka, tab segmen, tabel dengan pita header, tanggal dan jam dua baris, angka rata kanan, baris dibatalkan dicoret. |
+| **Layar ponsel (≤ 860px)** | Tabel menjadi daftar transaksi (judul + nominal, tanggal + saldo, referensi, aksi). Matriks iuran bisa digeser dengan kolom nama menempel. Kertas di dialog menjadi daftar kartu per transaksi; saat dicetak tetap berbentuk tabel A4. |
+
+Kertas selalu putih dengan huruf Arial (media cetak), sehingga warnanya memakai token `--pp-*` di `statement.css`, bukan token tema gelap. Untuk dokumen baru cukup memanggil `ST.doc({...})` dan `ST.t(kolom, baris, {paper:true})`, lalu `ST.open({title, paper})`.
 
 ## Tampilan mobile (gaya Gojek)
 
@@ -211,6 +264,23 @@ Tampilan dua kolom di desktop: panel merek (logo dan nama sekolah dari cache per
 - Layar *Menunggu persetujuan* memakai tampilan yang sama.
 - Logo sekolah tampil di layar masuk setelah login pertama di perangkat tersebut (disimpan di cache karena data sekolah belum bisa dibaca sebelum login).
 
+
+### Kop sekolah dan nama aplikasi (v2.13, migrasi 014)
+
+- Layar masuk menampilkan logo sekolah berukuran besar dengan kop: instansi induk, nama sekolah, alamat, dan telepon, dipisah garis ganda seperti kop surat. Isinya diambil dari **Pengaturan > Umum**.
+- Tulisan **SekolahHub** dapat diganti admin di **Pengaturan > Umum > Nama aplikasi** (maksimal 40 karakter). Nama baru tampil di menu samping, layar masuk, judul tab, tampilan mobile, dan cetakan. Kosongkan lalu simpan untuk kembali ke "SekolahHub".
+- Jalankan `supabase/migrations/014_nama_aplikasi.sql` sekali di SQL Editor. Migrasi menambah kolom `app_nama` dan fungsi `brand_publik()` yang hanya mengembalikan nama aplikasi, nama sekolah, logo, instansi, alamat, dan telepon (data non-sensitif) agar kop tampil juga di perangkat yang baru dipakai sebelum login. Tanpa migrasi, kop tetap tampil dari salinan perangkat setelah login pertama, dan nama aplikasi tetap "SekolahHub".
+- Kotak **Masuk** dan **Daftar** kini berukuran sama di desktop (tinggi tetap; isi menggulir di dalam kotak bila layar sangat pendek). Di ponsel, lebar dan posisi tab identik.
+
+## Voting per akun (v2.14, migrasi 015)
+
+- **Siapa yang memilih:** akun **Siswa** yang sedang login, atas nama siswa yang tertaut ke akunnya. Admin dan pengurus tidak lagi memilihkan suara; mereka membuat pemilihan, memantau partisipasi, dan menutupnya. Siswa yang belum punya akun belum dapat memilih: buat dan tautkan akunnya di menu **Pengguna**.
+- **Aturan:** satu akun satu suara per pemilihan, tidak dapat diubah, hanya saat pemilihan dibuka, dan hanya untuk siswa dari **kelas kandidat** (kandidat kelas 5A hanya dipilih siswa 5A).
+- **Rahasia:** akun Siswa tidak lagi membaca tabel `voting` (yang memuat siapa memilih siapa). Siswa hanya menerima rekap dan pilihannya sendiri, dan rekap baru tampil setelah pemilihan **ditutup** agar tidak memengaruhi pilihan teman. Admin dan pengurus melihat perolehan suara dan daftar siswa yang belum memilih, tanpa pilihan per orang di layar.
+- **Ditegakkan di database:** identitas pemilih diambil dari sesi login di server, bukan dari kiriman aplikasi. Trigger mengabaikan penulisan langsung ke kolom `suara`.
+- **Pasang:** jalankan `supabase/migrations/015_voting_per_akun.sql` sekali di SQL Editor setelah migrasi 011 (instalasi baru sudah termasuk di `schema.sql`). Tanpa migrasi, akun Siswa melihat pesan bahwa fitur belum aktif. Setelah itu jalankan `supabase/tests/akses_siswa_check.sql` untuk memverifikasi.
+- **Catatan:** pemilihan lama yang suaranya dicatat manual tetap tampil di sisi admin. Akun Siswa tidak lagi melihat daftar suara lama, hanya rekap.
+
 ## Pengaturan
 
 Halaman Pengaturan dibagi menjadi tujuh bagian dengan pil navigasi yang ikut menandai posisi saat digulir. Perubahan isian ditampung dulu dan baru disimpan lewat bar **Simpan perubahan** (bisa dibatalkan), serta tidak tertimpa pembaruan realtime saat sedang mengetik.
@@ -301,4 +371,4 @@ Akun baru berstatus pending. Admin menyetujuinya lewat menu **Pengguna**.
 - Jangan pernah memasukkan `service_role` key ke frontend atau repository.
 - Penarikan melebihi saldo ditolak oleh database (trigger `guard_saldo`), bukan hanya oleh tampilan.
 - `vercel.json` memakai `'unsafe-inline'` pada script karena antarmuka memakai atribut `onclick`.
-- Voting: suara disimpan dalam satu baris, jadi dua orang yang memilih pada detik yang sama bisa saling menimpa.
+- Voting (sejak v2.14): suara hanya masuk lewat fungsi `beri_suara()` yang mengunci baris pemilihan, sehingga suara bersamaan tidak saling menimpa dan tidak bisa dipalsukan dari aplikasi. Menyimpan ulang atau memulihkan cadangan tidak mengubah suara yang sudah masuk (cadangan lama tidak membawa suara).
