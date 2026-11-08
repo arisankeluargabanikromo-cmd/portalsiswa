@@ -14,7 +14,7 @@
     siswa:    { table: 'siswa', order: 'nama', dates: ['tgl', 'masuk'],
                 cols: ['nama','nis','nisn','kelas','jk','tl','tgl','agama','gol','alamat','hp','ayah','ibu','wali','pkj','hobi','cita','kes','masuk','bio','foto','cover','target'] },
     tab:      { table: 'tabungan',   order: 'tgl', dates: ['tgl'], cols: ['sid','tgl','jenis','jml','cat'] },
-    iuran:    { table: 'iuran',      order: 'bulan', dates: ['tgl'], cols: ['sid','bulan','jml','tgl','cat'] },
+    iuran:    { table: 'iuran',      order: 'bulan', dates: ['tgl','minggu'], cols: ['sid','bulan','minggu','jml','tgl','cat'] },   // minggu = tanggal Senin (migrasi 012)
     absensi:  { table: 'absensi',    order: 'tgl', dates: ['tgl'], cols: ['sid','tgl','st'] },
     kas:      { table: 'kas',        order: 'tgl', dates: ['tgl'], cols: ['tgl','jenis','jml','ket'] },
     agenda:   { table: 'agenda',     order: 'tgl', dates: ['tgl'], cols: ['tgl','judul','ket'] },
@@ -34,6 +34,7 @@
   function toRow(k, it) {
     const m = MAP[k], r = { id: it.id };
     for (const c of m.cols) {
+      if (k === 'iuran' && c === 'minggu' && Data.weekOk === false) continue;
       let v = it[c];
       if (m.dates && m.dates.includes(c) && !v) v = null;
       else if (v === undefined || v === null) v = c in DEFAULT ? DEFAULT[c] : '';
@@ -129,18 +130,22 @@
     },
     async _profile(session) {
       Data.user = session ? session.user : null;
-      Data.role = 'pending';
+      Data.role = 'pending'; Data.klaim = null;
       if (!Data.user) return;
-      const { data } = await sb.from('profiles').select('role').eq('id', Data.user.id).maybeSingle();
+      let r = await sb.from('profiles').select('role,klaim_jenis,klaim_nis').eq('id', Data.user.id).maybeSingle();
+      if (r.error) r = await sb.from('profiles').select('role').eq('id', Data.user.id).maybeSingle();   // sebelum migrasi 010
+      const data = r.data;
       Data.role = (data && data.role) || 'pending';
+      if (data && (data.klaim_jenis || data.klaim_nis)) Data.klaim = { jenis: data.klaim_jenis || '', nis: data.klaim_nis || '' };
     },
     async login(email, password) {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw new Error(error.message === 'Invalid login credentials' ? 'Email atau kata sandi salah.' : error.message);
       return null;
     },
-    async signup(email, password) {
-      const { data, error } = await sb.auth.signUp({ email, password });
+    async signup(email, password, meta) {
+      // meta (klaim_jenis, klaim_nis) hanya saran untuk admin; tidak pernah memberi akses.
+      const { data, error } = await sb.auth.signUp({ email, password, options: { data: meta || {} } });
       if (error) throw error;
       return data.session ? null : 'Akun dibuat. Periksa email untuk konfirmasi, lalu masuk.';
     },
@@ -164,14 +169,27 @@
     // Muat semua tabel secara paralel
     async pull() {
       const db = {};
-      await Promise.all([...ORDER.map(k => Data.loadTable(db, k)), Data.loadCfg(db)]);
+      await Promise.all([...ORDER.map(k => Data.loadTable(db, k)), Data.loadCfg(db), Data.loadRekan(db), Data.probeWeekly()]);
       await signPhotos(db);
       return db;
+    },
+    // Migrasi 012: apakah kolom iuran.minggu sudah ada. false = iuran mingguan dinonaktifkan dan UI menampilkan petunjuk migrasi.
+    weekOk: null,
+    async probeWeekly() {
+      try { const { error } = await sb.from('iuran').select('minggu').limit(1); Data.weekOk = !error } catch (e) { Data.weekOk = false }
+    },
+    // Akun Siswa: nama teman sekelas (id, nama, kelas) untuk menampilkan nama pengurus dan kandidat voting. Fungsi rekan_kelas() dari migrasi 011.
+    // Gagal-diam bila migrasi belum dijalankan; db.rekan tidak pernah ikut disimpan ke server.
+    async loadRekan(db) {
+      db.rekan = [];
+      if (Data.role !== 'siswa') return;
+      try { const { data, error } = await sb.rpc('rekan_kelas'); if (!error && Array.isArray(data)) db.rekan = data; } catch (e) { /* abaikan */ }
     },
     // Muat ulang hanya tabel yang berubah (dipakai realtime)
     async refresh(db, tables) {
       await Promise.all([...ORDER.filter(k => tables.has(MAP[k].table)).map(k => Data.loadTable(db, k)),
-        ...(tables.has('pengaturan') ? [Data.loadCfg(db)] : [])]);
+        ...(tables.has('pengaturan') ? [Data.loadCfg(db)] : []),
+        ...(tables.has('siswa') ? [Data.loadRekan(db)] : [])]);
       if (tables.has('siswa')) await signPhotos(db);
     },
     push(db) {
@@ -240,10 +258,24 @@
     },
 
     // Manajemen pengguna (hanya admin yang lolos RLS)
+    akunExt: false,
     async users() {
-      const { data, error } = await sb.from('profiles').select('id,email,role,created_at').order('created_at');
-      if (error) throw error;
-      return data;
+      let r = await sb.from('profiles').select('id,email,role,created_at,klaim_jenis,klaim_nis,disetujui_pada').order('created_at');
+      Data.akunExt = !r.error;   // migrasi 010 sudah dijalankan?
+      if (r.error) r = await sb.from('profiles').select('id,email,role,created_at').order('created_at');
+      if (r.error) throw r.error;
+      return r.data;
+    },
+    /* Setujui / ubah peran / cabut akses + tautan siswa dalam satu transaksi (fungsi approve_account, migrasi 010). */
+    async approve(id, role, sids) {
+      sids = sids || [];
+      const { error } = await sb.rpc('approve_account', { p_uid: id, p_role: role, p_sids: sids });
+      if (!error) return;
+      if (/approve_account|schema cache|PGRST202/i.test((error.code || '') + ' ' + (error.message || ''))) {
+        if (role === 'siswa') throw new Error('Peran Siswa membutuhkan migrasi 010 di Supabase. Lihat README.');
+        await Data.setRole(id, role); if (role === 'ortu') await Data.setChildren(id, sids); return;   // jalur lama
+      }
+      throw error;
     },
     async setRole(id, role) {
       const { error } = await sb.from('profiles').update({ role }).eq('id', id);

@@ -44,7 +44,7 @@
     const d = dlg(`<h3>${isNew ? 'Setujui akun' : 'Atur akun'}</h3>`
       + `<div class='akb'><b>${esc(u.email)}</b><span class='lab'>Mendaftar ${fd(String(u.created_at).slice(0, 10))}${u.disetujui_pada ? ' · disetujui ' + fd(String(u.disetujui_pada).slice(0, 10)) : ''}</span><div class='akn'>${claimHtml(u)}</div></div>`
       + `<h4 class='sh4'>Peran</h4><div class='rls' role='radiogroup' aria-label='Peran'>${ROLES.map(r => `<label class='rl ${r[0] == role ? 'on' : ''} ${r[0] == 'siswa' && !ext ? 'off' : ''}'><input type='radio' name='rl' value='${r[0]}' ${r[0] == role ? 'checked' : ''} ${r[0] == 'siswa' && !ext ? 'disabled' : ''}><span><b>${r[1]}</b><small>${r[2]}</small></span></label>`).join('')}</div>`
-      + (ext ? '' : `<div class='nt' style='margin-top:10px'>Peran <b>Siswa</b> membutuhkan migrasi <b>008</b> di Supabase. Lihat README.</div>`)
+      + (ext ? '' : `<div class='nt' style='margin-top:10px'>Peran <b>Siswa</b> membutuhkan migrasi <b>010</b> di Supabase. Lihat README.</div>`)
       + `<div id='pks'></div><div class='msg' id='ake'></div>`
       + `<div class='acts'><button id='x' type='button'>Batal</button><span class='sp'></span><button class='p' id='aok' type='button'>${isNew ? 'Setujui' : 'Simpan'}</button></div>`, d => {
       const er = t => { d.querySelector('#ake').textContent = t || '' };
@@ -134,7 +134,9 @@
       const sw = Data.role == 'siswa', nm = db.siswa.map(s => s.nama);
       dlg(`<h3>Selamat datang${sw ? ', ' + esc(String(db.siswa[0].nama).split(' ')[0]) : ''}!</h3>`
         + `<p>Akun ${sw ? 'Anda' : ''} sudah disetujui admin <b>${esc(db.cfg.sekolah)}</b>.</p>`
-        + `<ul class='wl'><li>${sw ? 'Anda dapat melihat' : 'Anda dapat melihat data ' + esc(nm.join(', ')) + ': '} saldo tabungan, status iuran, kehadiran, dan profil.</li><li>Pengumuman dan agenda sekolah tampil di Beranda.</li><li>Akun ini <b>hanya-lihat</b>. Tidak ada data yang bisa diubah, dan data siswa lain tidak dapat dilihat.</li></ul>`
+        + (sw
+          ? `<ul class='wl'><li>Kartu pelajar Anda tampil di bagian paling atas Beranda.</li><li>Anda dapat membuka menu <b>Keuangan</b> (Tabungan, Kas Kelas, Iuran, Pengingat) dan <b>Kelas</b> (Data Siswa, Struktur Kelas, Absensi, Agenda, Pengumuman, Voting).</li><li>Akun ini <b>hanya-lihat</b>. Tidak ada data yang bisa diubah, dan data pribadi siswa lain tidak dapat dilihat.</li></ul>`
+          : `<ul class='wl'><li>Anda dapat melihat data ${esc(nm.join(', '))}: saldo tabungan, status iuran, kehadiran, dan profil.</li><li>Pengumuman dan agenda sekolah tampil di Beranda.</li><li>Akun ini <b>hanya-lihat</b>. Tidak ada data yang bisa diubah, dan data siswa lain tidak dapat dilihat.</li></ul>`)
         + `<div class='pbar' style='justify-content:flex-end;margin:16px 0 0'><button class='p' id='x' type='button'>Mulai</button></div>`);   // .pbar: tidak disembunyikan mode baca-saja (.ro)
     }
   };

@@ -3,9 +3,9 @@
    $, esc, rp, fd, today, toast, logA, ico, sis, saldo, total, kelasList, csv, WA_TAB, WA_IUR. */
 (() => {
   'use strict';
-  const VER = '2.5.5';
+  const VER = '2.10.0';
   const adm = () => Data.role == 'admin';
-  const ROLE = { admin: 'Admin', pengurus: 'Pengurus', viewer: 'Hanya lihat', ortu: 'Orang tua', pending: 'Menunggu' };
+  const ROLE = ROLEL;
   /* Koleksi data yang dapat dihapus. DEP = ikut terhapus bila data siswa dihapus. */
   const COLL = [['siswa', 'Data siswa'], ['tab', 'Transaksi tabungan'], ['iuran', 'Pembayaran iuran'], ['absensi', 'Absensi'], ['kas', 'Kas kelas'], ['agenda', 'Agenda'], ['info', 'Pengumuman'], ['vote', 'Voting'], ['struktur', 'Struktur kelas']];
   const DEP = ['tab', 'iuran', 'absensi', 'struktur', 'vote'];
@@ -49,14 +49,15 @@
   const sec = (id, inner, c) => `<section class='card stc ${c || ''}' id='st-${id}'>${inner}</section>`;
   const note = t => `<div class='nt'>${t}</div>`;
 
+  /* Urutan kolom: Admin, Pengurus, Lihat, Ortu, Siswa. y = ya, n = tidak, a = "Anak" (ortu), s = "Sendiri" (siswa) */
   const MX = [
-    ['Melihat data siswa, tabungan, iuran, dan absensi', 'yyya'], ['Melihat pengumuman dan agenda', 'yyyy'],
-    ['Mencatat tabungan, iuran, absensi, dan kas', 'yynn'], ['Mengelola siswa, pengumuman, agenda, voting, dan struktur', 'yynn'],
-    ['Mengunduh cadangan dan ekspor CSV', 'yyyn'], ['Mengubah identitas, logo, dan pengaturan sekolah', 'ynnn'],
-    ['Menyetujui akun, mengatur peran, menautkan orang tua', 'ynnn'], ['Memulihkan cadangan dan mereset data', 'ynnn']
+    ['Melihat data siswa, tabungan, iuran, dan absensi', 'yyyas'], ['Melihat pengumuman dan agenda', 'yyyyy'],
+    ['Mencatat tabungan, iuran, absensi, dan kas', 'yynnn'], ['Mengelola siswa, pengumuman, agenda, voting, dan struktur', 'yynnn'],
+    ['Mengunduh cadangan dan ekspor CSV', 'yyynn'], ['Mengubah identitas, logo, dan pengaturan sekolah', 'ynnnn'],
+    ['Menyetujui akun, mengatur peran, menautkan akun ke siswa', 'ynnnn'], ['Memulihkan cadangan dan mereset data', 'ynnnn']
   ];
-  const mx = () => `<div class='mx' role='table' aria-label='Hak akses per peran'><div class='mh' role='columnheader'>Kemampuan</div>${['Admin', 'Pengurus', 'Lihat', 'Ortu'].map(h => `<div class='mh c' role='columnheader'>${h}</div>`).join('')}`
-    + MX.map(r => `<div class='mc' role='cell'>${r[0]}</div>${[...r[1]].map(c => `<div class='c ${c}' role='cell'>${c == 'y' ? `<span class='sr'>Ya</span>${P(IC.ok)}` : c == 'a' ? 'Anak' : `<span class='sr'>Tidak</span>–`}</div>`).join('')}`).join('') + `</div>`;
+  const mx = () => `<div class='mx' role='table' aria-label='Hak akses per peran'><div class='mh' role='columnheader'>Kemampuan</div>${['Admin', 'Pengurus', 'Lihat', 'Ortu', 'Siswa'].map(h => `<div class='mh c' role='columnheader'>${h}</div>`).join('')}`
+    + MX.map(r => `<div class='mc' role='cell'>${r[0]}</div>${[...r[1]].map(c => `<div class='c ${c == 's' ? 'a' : c}' role='cell'>${c == 'y' ? `<span class='sr'>Ya</span>${P(IC.ok)}` : c == 'a' ? 'Anak' : c == 's' ? 'Sendiri' : `<span class='sr'>Tidak</span>–`}</div>`).join('')}`).join('') + `</div>`;
 
   V.pengaturan = () => {
     SD = false;
@@ -79,13 +80,13 @@
 
     /* Keuangan */
     h += sec('keuangan', head('keuangan', 'Keuangan', 'Iuran kelas dan pesan pengingat untuk wali murid.')
-      + `<div class='fg'>${inp('iuran', 'Iuran kelas per bulan (Rp)', { t: 'number' })}</div>`
+      + `<div class='fg'>${inp('iuran', 'Iuran kelas per minggu (Rp)', { t: 'number' })}</div>`
       + `<label>Pesan pengingat tabungan<textarea data-cfg='watab' rows='3' placeholder='${esc(WA_TAB)}' ${a ? '' : 'disabled'}>${esc(c.watab)}</textarea></label>`
       + `<label>Pesan pengingat iuran<textarea data-cfg='waiuran' rows='3' placeholder='${esc(WA_IUR)}' ${a ? '' : 'disabled'}>${esc(c.waiuran)}</textarea></label>`
       + (a ? `<p class='lab'>Ketuk kata kunci untuk menyisipkannya ke pesan. Kosongkan pesan untuk memakai teks bawaan.</p><div class='chips'>${['{nama}', '{kelas}', '{sekolah}', '{saldo}', '{bulan}', '{nominal}', '{kekurangan}'].map(t => `<button type='button' class='s chip' onclick="A.ins('${t}')">${t}</button>`).join('')}</div>` : ''));
 
     /* Hak akses */
-    if (a) h += sec('akses', head('akses', 'Hak akses', 'Aturan ditegakkan di database (RLS), bukan hanya di tampilan. Akun baru berstatus Menunggu sampai disetujui.')
+    if (a) h += sec('akses', head('akses', 'Hak akses', 'Aturan ditegakkan di database (RLS), bukan hanya di tampilan. Akun baru berstatus Menunggu sampai admin menyetujui dan, untuk siswa atau orang tua, menautkannya ke data siswa.')
       + `<div class='tw'>${mx()}</div><h4 class='sh4'>Akun menunggu persetujuan</h4><div id='pu'><div class='empty'>Memuat…</div></div><div id='rc' class='chips rc'></div>`
       + `<div class='pbar'><a class='btn' href='#pengguna'>Kelola semua pengguna</a></div>`);
 
@@ -152,9 +153,11 @@
       const pu = $('#pu'); if (!pu) return;
       Data.users().then(u => {
         USERS = u; const by = r => u.filter(x => x.role == r).length;
-        const rc = $('#rc'); if (rc) rc.innerHTML = ['admin', 'pengurus', 'viewer', 'ortu', 'pending'].map(r => `<span class='tag'>${ROLE[r]} · ${by(r)}</span>`).join('');
+        const rc = $('#rc'); if (rc) rc.innerHTML = ['admin', 'pengurus', 'viewer', 'siswa', 'ortu', 'pending'].map(r => `<span class='tag'>${ROLE[r]} · ${by(r)}</span>`).join('');
         const p = u.filter(x => x.role == 'pending');
-        pu.innerHTML = p.length ? p.map(x => `<div class='item pnd'><div class='pni'><b>${esc(x.email)}</b><div class='lab'>Mendaftar ${fd(String(x.created_at).slice(0, 10))}</div></div><div class='pnr'><select id='pr_${x.id}' aria-label='Peran untuk ${esc(x.email)}'>${[['viewer', 'Hanya lihat'], ['pengurus', 'Pengurus'], ['ortu', 'Orang tua'], ['admin', 'Admin']].map(r => `<option value='${r[0]}'>${r[1]}</option>`).join('')}</select><button type='button' class='p s' onclick="A.setuju('${x.id}')">Setujui</button></div></div>`).join('')
+        const kj = { siswa: 'Siswa', ortu: 'Orang tua', staf: 'Guru / staf' };
+        pu.innerHTML = p.length ? p.map(x => { const m = x.klaim_nis ? db.siswa.find(s => String(s.nis).trim().toLowerCase() == String(x.klaim_nis).trim().toLowerCase()) : null;
+          return `<div class='item pnd'><div class='pni'><b>${esc(x.email)}</b><div class='lab'>Mendaftar ${fd(String(x.created_at).slice(0, 10))}${x.klaim_jenis || x.klaim_nis ? ' · mengaku ' + esc(kj[x.klaim_jenis] || 'pengguna') + (x.klaim_nis ? ' (NIS ' + esc(x.klaim_nis) + (m ? ' → ' + esc(m.nama) : ', tidak ditemukan') + ')' : '') : ''}</div></div><div class='pnr'><button type='button' class='p s' onclick="A.setujui('${x.id}')">Tinjau & setujui</button></div></div>` }).join('')
           : `<div class='empty'>Tidak ada akun yang menunggu persetujuan.</div>`;
       }).catch(e => { pu.innerHTML = `<div class='empty'>${esc(e.message)}</div>` });
     }
@@ -200,11 +203,6 @@
         d.querySelector('#ok').onclick = () => { Data.dropLogo(db.cfg.logo); db.cfg.logo = ''; logA('Logo sekolah dihapus'); save(); d.close(); PG.paintLogo(); toast('Logo dihapus') };
       });
     },
-    /* Hak akses */
-    setuju(id) {
-      const u = USERS.find(x => x.id == id), r = $('#pr_' + id).value; if (!u) return;
-      Data.setRole(id, r).then(() => { logA('Akun ' + u.email + ' disetujui sebagai ' + ROLE[r]); save(); toast(r == 'ortu' ? 'Disetujui. Tautkan ke siswa lewat Kelola pengguna.' : 'Akun disetujui'); PG.users() }, e => toast(e.message));
-    },
     /* Cadangan */
     unduh(tag) {
       const j = { app: 'sekolahhub', versi: VER, dibuat: new Date().toISOString(), sekolah: db.cfg.sekolah, db };
@@ -228,7 +226,7 @@
       i.click();
     },
     /* Ekspor CSV */
-    csvIuran() { csv('iuran-kelas', [['Bulan', 'Nama', 'NIS', 'Kelas', 'Jumlah', 'Tanggal bayar', 'Catatan'], ...db.iuran.slice().sort((a, b) => a.bulan.localeCompare(b.bulan)).map(x => { const s = sis(x.sid); return [x.bulan, s.nama, s.nis, s.kelas, x.jml, x.tgl, x.cat] })]) },
+    csvIuran() { csv('iuran-kelas', [['Minggu (Senin)', 'Bulan', 'Nama', 'NIS', 'Kelas', 'Jumlah', 'Tanggal bayar', 'Catatan'], ...db.iuran.slice().sort((a, b) => (a.minggu || a.bulan).localeCompare(b.minggu || b.bulan)).map(x => { const s = sis(x.sid); return [x.minggu || '', x.bulan, s.nama, s.nis, s.kelas, x.jml, x.tgl, x.cat] })]) },
     csvKas() { csv('kas-kelas', [['Tanggal', 'Jenis', 'Jumlah', 'Keterangan'], ...db.kas.slice().sort((a, b) => a.tgl.localeCompare(b.tgl)).map(k => [k.tgl, k.jenis == 'masuk' ? 'Masuk' : 'Keluar', k.jml, k.ket])]) },
     csvAbsen() { const N = { H: 'Hadir', S: 'Sakit', I: 'Izin', A: 'Alpa' }; csv('absensi', [['Tanggal', 'Nama', 'NIS', 'Kelas', 'Status'], ...db.absensi.slice().sort((a, b) => a.tgl.localeCompare(b.tgl)).map(x => { const s = sis(x.sid); return [x.tgl, s.nama, s.nis, s.kelas, N[x.st] || x.st] })]) },
     /* Pemeliharaan */

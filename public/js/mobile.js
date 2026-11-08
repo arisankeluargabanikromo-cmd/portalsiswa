@@ -22,7 +22,7 @@
   const LOGO = `<svg class='logo' viewBox='0 0 64 64'><rect class='lr' width='64' height='64' rx='16'/><path class='lg' d='M32 17l20 9-20 9-20-9z'/><path class='lg' d='M20 34v8c0 3 6 6 12 6s12-3 12-6v-8l-12 5.5z'/><path class='lt' d='M52 26v14' fill='none' stroke-width='3' stroke-linecap='round'/></svg>`;
   const nv = id => (NAV.find(n => n[0] == id) || [])[3] || IC.apps;
   const nn = id => (NAV.find(n => n[0] == id) || [])[1] || '';
-  const ortu = () => Data.role == 'ortu';
+  const ortu = () => Data.role == 'ortu' || Data.role == 'siswa';   // peran portal: orang tua dan siswa
   const homeId = () => ortu() ? 'portal' : 'dashboard';
   const lsGet = k => { try { return localStorage.getItem(k) } catch (e) { return null } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v) } catch (e) {} };
@@ -54,7 +54,7 @@
   const tile = s => `<a class='sv' href='#${s.id}' style='--c:${COL[s.id] || 'var(--pr)'}'>${tileInner(s)}</a>`;
 
   /* ---------- Halaman Akun ---------- */
-  const ROLE = { admin: 'Admin', pengurus: 'Pengurus', viewer: 'Hanya lihat', ortu: 'Orang tua', pending: 'Menunggu' };
+  const ROLE = ROLEL;
   V.menu = () => {
     const email = Data.user?.email || '', has = id => svAll().find(s => s.id == id);
     const link = (id, label, ic, d) => `<a class='mn-r' href='#${id}' style='--c:${COL[id]}'><span class='mn-i'>${ico(ic)}</span><span><b>${label}</b><small>${esc(d)}</small></span>${S(IC.chev)}</a>`;
@@ -90,7 +90,6 @@
     if (cur == 'dashboard' || cur == 'portal') return [sk, db.cfg.tahun ? 'Tahun ajaran ' + db.cfg.tahun : ''];
     if (cur == 'menu') return ['Akun', ''];
     if (cur == 'profil') return [s ? s.nama : 'Profil siswa', s ? 'Kelas ' + s.kelas : ''];
-    if (cur == 'tambah') return ['Tambah siswa', ''];
     if (cur == 'ubah') return ['Ubah profil', s ? s.nama : ''];
     if (cur == 'pengaturan') return ['Pengaturan', ''];
     return [nn(cur), ''];
@@ -111,8 +110,7 @@
     if (window.Theme) Theme.meta();
   }
   function goBack() {
-    if (cur == 'tambah') location.hash = 'siswa';
-    else if (cur == 'ubah') location.hash = 'profil-' + PID;
+    if (cur == 'ubah') location.hash = 'profil-' + PID;
     else if (hops > 0) history.back();
     else location.hash = cur == 'pengaturan' ? 'menu' : homeId();
   }
@@ -134,7 +132,9 @@
   }
   function homeHTML() {
     const dash = cur == 'dashboard', w = Data.canWrite(), p = pins(), all = svAll();
-    let h = `<section id='hm'><div class='hg ${dash ? '' : 's'}'><button type='button' class='srch' data-search>${S(IC.search)}<span>Cari siswa, layanan, atau aksi</span></button></div>`;
+    const sw = Data.role == 'siswa' && window.SWV && db.siswa.length;   // akun Siswa: kartu pelajar (lanskap, depan) di bagian paling atas
+    let h = `<section id='hm'><div class='hg ${dash || sw ? '' : 's'}'><button type='button' class='srch' data-search>${S(IC.search)}<span>Cari siswa, layanan, atau aksi</span></button></div>`;
+    if (sw) h += `<div class='swm-h'>${SWV.hero()}</div>`;
     if (dash) {
       let d = 0; try { d = total() - net(mk(-1)) } catch (e) {}
       const hid = hide(), acts = w

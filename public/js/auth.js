@@ -18,7 +18,7 @@
   const FEAT = [
     ['wallet', 'Tabungan siswa', 'Setoran, penarikan, dan buku tabungan siap cetak.'],
     ['clip', 'Iuran dan absensi', 'Pantau pembayaran dan kehadiran setiap bulan.'],
-    ['users', 'Portal orang tua', 'Wali murid melihat perkembangan anak dari rumah.']
+    ['users', 'Portal siswa dan orang tua', 'Siswa dan wali murid melihat data tabungan, iuran, dan kehadiran sendiri.']
   ];
   /* Terjemahan pesan galat Supabase/jaringan yang paling sering muncul */
   const friendly = m => {
@@ -32,7 +32,7 @@
     if (/signups? not allowed|disabled/i.test(m)) return 'Pendaftaran akun baru sedang dinonaktifkan.';
     return m || 'Terjadi kesalahan. Coba lagi.';
   };
-  let tab = 'login', mail = '';
+  let tab = 'login', mail = '', kj = 'siswa', nisv = '';   // kj/nisv: klaim saat mendaftar (hanya saran untuk admin)
 
   function logoTile(bc, n) {
     const i = bc.u ? `<img src='${esc(bc.u)}' alt='' width='${n}' height='${n}' onerror='Brand.bad(this)'>` : Brand.mark();
@@ -54,6 +54,7 @@
       a.innerHTML = shell(`<div class='afc'><span class='aic'>${P(IC.clock, 28)}</span><h1>Menunggu persetujuan</h1>`
         + `<p class='afs'>Akun sudah terdaftar. Admin perlu menyetujui akun ini sebelum data sekolah dapat dibuka.</p>`
         + `<div class='aem'>${P(IC.mail, 16)}<span>${esc(Data.user.email)}</span></div>`
+        + (Data.klaim ? `<p class='afs'>Anda mendaftar sebagai <b>${esc({ siswa: 'Siswa', ortu: 'Orang tua', staf: 'Guru / staf' }[Data.klaim.jenis] || 'pengguna')}</b>${Data.klaim.nis ? ', NIS <b>' + esc(Data.klaim.nis) + '</b>' : ''}. Admin akan mencocokkannya dengan data siswa.</p>` : '')
         + `<button class='p afb' id='re' type='button'>Periksa lagi</button><button class='afb afg' id='lo' type='button'>Keluar</button>`
         + `<p class='afn'>Anda akan bisa masuk setelah admin menetapkan peran untuk akun ini. Hubungi admin atau wali kelas bila terlalu lama.</p></div>`, bc);
       Theme.refresh(); $('#re').onclick = () => location.reload(); $('#lo').onclick = () => Data.logout(); return;
@@ -67,6 +68,8 @@
       + `<div class='af'><label for='em'>Email</label><div class='afi'>${P(IC.mail)}<input id='em' type='email' inputmode='email' autocomplete='username' autocapitalize='off' spellcheck='false' placeholder='nama@email.com' value='${esc(mail)}' required></div></div>`
       + `<div class='af'><label for='pw'>Kata sandi</label><div class='afi pw'>${P(IC.lock)}<input id='pw' type='password' autocomplete='${reg ? 'new-password' : 'current-password'}' placeholder='Minimal 6 karakter' required><button type='button' class='eye' id='ey' aria-label='Tampilkan kata sandi' aria-pressed='false'>${P(IC.eye)}</button></div><div class='cap' id='cap' role='status'>Caps Lock sedang aktif</div></div>`
       + (reg ? `<div class='af'><label for='pw2'>Ulangi kata sandi</label><div class='afi pw'>${P(IC.lock)}<input id='pw2' type='password' autocomplete='new-password' placeholder='Ketik ulang kata sandi' required></div></div>` : '')
+      + (reg ? `<div class='af'><label id='kjl'>Saya mendaftar sebagai</label><div class='arole' role='radiogroup' aria-labelledby='kjl'>${[['siswa', 'Siswa'], ['ortu', 'Orang tua'], ['staf', 'Guru / staf']].map(k => `<button type='button' role='radio' data-kj='${k[0]}' aria-checked='${kj == k[0]}'>${k[1]}</button>`).join('')}</div></div>`
+        + `<div class='af' id='nisw' ${kj == 'staf' ? 'hidden' : ''}><label for='nis' id='nisl'>${kj == 'ortu' ? 'NIS anak' : 'NIS siswa'} <span class='mu'>(opsional)</span></label><div class='afi'>${P(IC.clip)}<input id='nis' type='text' inputmode='numeric' autocomplete='off' maxlength='40' placeholder='Contoh: 2024100' value='${esc(nisv)}'></div><div class='afh'>Membantu admin mencocokkan akun Anda dengan data siswa. Admin tetap memverifikasi sebelum akun aktif.</div></div>` : '')
       + `<div id='aerr' class='amsg' role='alert' aria-live='polite'></div>`
       + `<button class='p afb' id='sb' type='submit'><span class='lb'>${reg ? 'Buat akun' : 'Masuk'}</span></button></form>`
       + `<p class='afn'>${reg ? 'Akun baru perlu disetujui admin sebelum dapat membuka data. Akun pertama yang mendaftar otomatis menjadi admin.' : 'Belum punya akun? Pilih <b>Daftar</b>. Lupa kata sandi? Hubungi admin sekolah.'}</p></div>`, bc);
@@ -80,6 +83,11 @@
 
     document.querySelectorAll('[data-tab]').forEach(b => { b.onclick = () => { if (b.dataset.tab == tab) return; mail = em.value.trim(); tab = b.dataset.tab; authScreen('login') } });
     [em, pw, $('#pw2')].forEach(el => { if (el) el.addEventListener('input', () => { el.removeAttribute('aria-invalid'); if (!err.classList.contains('ok')) note('') }) });
+    document.querySelectorAll('[data-kj]').forEach(b => { b.onclick = () => {
+      kj = b.dataset.kj; document.querySelectorAll('[data-kj]').forEach(x => x.setAttribute('aria-checked', x == b));
+      $('#nisw').hidden = kj == 'staf'; $('#nisl').firstChild.textContent = (kj == 'ortu' ? 'NIS anak' : 'NIS siswa') + ' ';
+    } });
+    const nin = $('#nis'); if (nin) nin.addEventListener('input', () => { nisv = nin.value });
     $('#ey').onclick = () => {
       const show = pw.type == 'password'; pw.type = show ? 'text' : 'password';
       const p2 = $('#pw2'); if (p2) p2.type = pw.type;
@@ -96,7 +104,7 @@
       if (reg && p !== $('#pw2').value) return fail('Kata sandi tidak sama.', $('#pw2'));
       note(''); busy(true);
       try {
-        const m = await (reg ? Data.signup : Data.login)(e, p);
+        const m = await (reg ? Data.signup(e, p, { klaim_jenis: kj, klaim_nis: kj == 'staf' ? '' : (nin ? nin.value.trim() : '') }) : Data.login(e, p));
         if (m) { mail = e; tab = 'login'; authScreen('login', { t: m, ok: true }) } else boot();
       } catch (x) { busy(false); fail(friendly(x.message)) }
     };

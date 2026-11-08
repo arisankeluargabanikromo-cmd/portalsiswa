@@ -236,31 +236,24 @@
       add(r) { db.tab.push({ id: uid(), ...r }) }
     },
     iuran: {
-      title: 'Pembayaran iuran', coll: 'iuran', dup: true, tplName: 'template-impor-iuran', matrix: 'bulan',
+      title: 'Pembayaran iuran mingguan', coll: 'iuran', dup: true, tplName: 'template-impor-iuran',
       fields: [...ID,
-        { k: 'bulan', l: 'Bulan', req: 1, list: 1, al: ['bulan', 'periode', 'untukbulan', 'bulaniuran'] },
+        { k: 'minggu', l: 'Minggu (tanggal mana saja di minggu itu)', list: 1, al: ['minggu', 'pekan', 'mingguke', 'tanggalminggu', 'untukminggu', 'periode'] },
         { k: 'jml', l: 'Jumlah (Rp)', list: 1, al: ['jumlah', 'nominal', 'iuran', 'bayar', 'dibayar', 'jml'] },
-        { k: 'tgl', l: 'Tanggal bayar', list: 1, al: ['tanggalbayar', 'tglbayar', 'tanggal', 'tgl'] },
+        { k: 'tgl', l: 'Tanggal bayar', list: 1, al: ['tanggalbayar', 'tglbayar', 'dibayarpada', 'tanggal', 'tgl'] },
         { k: 'cat', l: 'Catatan', list: 1, al: ['catatan', 'keterangan', 'ket', 'cat'] }],
-      hint: 'Format daftar (satu baris per pembayaran) atau matriks bulanan (kolom Jan sampai Des) terdeteksi otomatis. Di matriks: angka = nominal, tanda v / lunas = sesuai iuran per bulan.',
+      hint: 'Satu baris per pembayaran mingguan. Kolom Minggu berisi tanggal mana saja di minggu yang dibayar; bila kosong, minggu diambil dari Tanggal bayar. Jumlah kosong memakai iuran per minggu di Pengaturan. Setiap pembayaran otomatis masuk ke Kas Kelas.',
       build(r, ctx) {
         const f = r.f, w = []; const rs = resolve(f, ctx); if (rs.err) return { err: rs.err }; if (rs.warn) w.push(...rs.warn);
-        let bulan, jml, tgl, cat = T(f.cat);
-        if (r.mx) {
-          const c = r.mx.cell, t = T(c); if (!c || !t || /^(-|–|0|belum|tidak|n|tk)$/i.test(t)) return { skip: 1 };
-          bulan = r.mx.ym; const n = numOf(c);
-          if (!isNaN(n) && n >= 100) jml = Math.round(n);
-          else if ((!isNaN(n) && n > 0 && n < 100) || TICK.test(t) || /^lunas/i.test(t)) { if (!(+db.cfg.iuran > 0)) return { err: 'Isi nominal iuran di Pengaturan atau tulis angka di sel (tanda v butuh nominal bawaan)' }; jml = +db.cfg.iuran }
-          else return { err: 'Isi sel "' + t + '" tidak dikenali (pakai angka atau v)' };
-          tgl = bulan + '-01';
-        } else {
-          bulan = monthOf(f.bulan, ctx.year); if (!bulan) return { err: T(f.bulan) ? 'Bulan "' + T(f.bulan) + '" tidak valid' : 'Bulan kosong' };
-          const n = f.jml && T(f.jml) ? money(f.jml) : (+db.cfg.iuran || NaN); if (isNaN(n) || n <= 0) return { err: f.jml && T(f.jml) ? 'Jumlah "' + T(f.jml) + '" tidak valid' : 'Jumlah kosong dan nominal bawaan belum diatur' }; jml = n;
-          tgl = f.tgl && T(f.tgl) ? dateOf(f.tgl) : ''; if (f.tgl && T(f.tgl) && !tgl) w.push('Tanggal bayar tidak valid, memakai awal bulan'); if (!tgl) tgl = bulan + '-01';
-        }
-        return { rec: { sid: rs.s.id, bulan, jml, tgl, cat }, warn: w, label: rs.s.nama + ' · ' + MONN[+bulan.slice(5) - 1] + ' ' + bulan.slice(0, 4) + ' · ' + rp(jml) };
+        const cat = T(f.cat), mg = f.minggu && T(f.minggu) ? dateOf(f.minggu) : '', tb = f.tgl && T(f.tgl) ? dateOf(f.tgl) : '';
+        if (f.minggu && T(f.minggu) && !mg) return { err: 'Minggu \"' + T(f.minggu) + '\" tidak valid (pakai tanggal)' };
+        if (f.tgl && T(f.tgl) && !tb) return { err: 'Tanggal bayar \"' + T(f.tgl) + '\" tidak valid' };
+        if (!mg && !tb) return { err: 'Minggu dan Tanggal bayar sama-sama kosong' };
+        const minggu = wkOf(mg || tb), tgl = tb || mg;
+        const n = f.jml && T(f.jml) ? money(f.jml) : (+db.cfg.iuran || NaN); if (isNaN(n) || n <= 0) return { err: f.jml && T(f.jml) ? 'Jumlah \"' + T(f.jml) + '\" tidak valid' : 'Jumlah kosong dan iuran per minggu belum diatur di Pengaturan' };
+        return { rec: { sid: rs.s.id, bulan: minggu.slice(0, 7), minggu, jml: n, tgl, cat }, warn: w, label: rs.s.nama + ' · ' + wkTitle(minggu) + ' · ' + rp(n) };
       },
-      classify(out, ctx) { keyed(out, ctx, r => r.sid + '|' + r.bulan, r => db.iuran.find(x => x.sid == r.sid && x.bulan == r.bulan), (old, r) => ['jml', 'tgl'].filter(k => String(old[k]) !== String(r[k])).map(k => k == 'jml' ? 'jumlah ' + rp(old.jml) + ' → ' + rp(r.jml) : 'tanggal bayar')) },
+      classify(out, ctx) { keyed(out, ctx, r => r.sid + '|' + r.minggu, r => db.iuran.find(x => x.sid == r.sid && x.minggu == r.minggu), (old, r) => ['jml', 'tgl'].filter(k => String(old[k]) !== String(r[k])).map(k => k == 'jml' ? 'jumlah ' + rp(old.jml) + ' → ' + rp(r.jml) : 'tanggal bayar')) },
       add(r) { db.iuran.push({ id: uid(), ...r }) },
       merge(old, r) { old.jml = r.jml; old.tgl = r.tgl; if (r.cat) old.cat = r.cat }
     },
@@ -461,7 +454,7 @@
       if (dataRows > MAXR) return msg('Terlalu banyak baris (' + dataRows + '). Maksimal ' + MAXR + ' per impor; pecah berkasnya.');
       const needAmt = S.kind == 'tab' || S.kind == 'kas';
       if (needAmt && !(('jml' in S.map && 'jenis' in S.map) || ['setor', 'tarik', 'in', 'out'].some(k => k in S.map))) return msg(S.kind == 'tab' ? 'Petakan kolom Jenis + Jumlah, atau kolom Setoran/Penarikan.' : 'Petakan kolom Jenis + Jumlah, atau kolom Pemasukan/Pengeluaran.');
-      if (S.kind == 'iuran' && !S.mcols && !('bulan' in S.map)) return msg('Petakan kolom Bulan, atau pakai berkas format matriks (kolom Jan sampai Des).');
+      if (S.kind == 'iuran' && !('minggu' in S.map) && !('tgl' in S.map)) return msg('Petakan kolom Minggu atau Tanggal bayar.');
       if (S.kind == 'absensi' && !S.mcols && !(('tgl' in S.map) && ('st' in S.map))) return msg('Petakan kolom Tanggal dan Status, atau pakai berkas format matriks (kolom tanggal).');
       S.res = analyze(); stepPreview();
     };
@@ -529,10 +522,10 @@
       { name: 'Daftar Siswa', rows: [['NIS', 'Nama', 'Kelas'], ...sis.map(s => [String(s.nis), s.nama, s.kelas])], widths: [14, 30, 10], colStyle: { 0: T5 } },
       P([['Kolom', 'Penjelasan'], ['NIS atau Nama', 'Isi salah satu untuk menunjuk siswa (NIS lebih diutamakan). Nama harus sama dengan data di aplikasi. Lihat lembar "Daftar Siswa".'], ['Tanggal*', 'Format tanggal Excel, atau 2026-03-05 / 05/03/2026.'], ['Jenis', 'Setor atau Tarik.'], ['Jumlah', 'Angka rupiah, misal 20000. Penarikan tidak boleh melebihi saldo.'], ['Alternatif', 'Boleh memakai dua kolom terpisah bernama "Setoran" dan "Penarikan" sebagai pengganti Jenis + Jumlah.'], ['Impor ulang', 'Baris yang sama persis dengan transaksi yang sudah ada dilewati, sehingga aman diimpor dua kali.']])];
     if (kind == 'iuran') {
-      const mo = MONN.map(m => m + ' ' + (dummy));
+      const mg = wkOf(today());
       return [
-        { name: 'Iuran ' + dummy, rows: [['NIS', 'Nama', 'Kelas', ...MONN], ...sis.map(s => [String(s.nis), s.nama, s.kelas])], widths: [14, 28, 9, ...MONN.map(() => 10)], colStyle: { 0: T5 } },
-        P([['Kolom', 'Penjelasan'], ['Format', 'Matriks: satu baris per siswa, kolom Jan sampai Des. Daftar siswa sudah terisi dari aplikasi.'], ['Isi sel', 'Tulis nominal (misal 10000), atau tanda v / lunas untuk membayar sesuai iuran per bulan di Pengaturan. Sel kosong, - , atau 0 dilewati.'], ['Tahun', 'Dipilih saat impor (judul bulan tanpa tahun memakai tahun yang Anda pilih).'], ['Alternatif', 'Format daftar juga didukung: kolom NIS/Nama, Bulan, Jumlah, Tanggal Bayar.'], ['Contoh judul', mo.slice(0, 3).join(', ') + ', …'], ['Impor ulang', 'Pembayaran bulan yang sudah tercatat dilewati atau diperbarui sesuai pilihan saat impor.']])];
+        { name: 'Iuran mingguan', rows: [['NIS', 'Nama', 'Kelas', 'Minggu', 'Jumlah', 'Tanggal Bayar', 'Catatan'], ...sis.map(s => [String(s.nis), s.nama, s.kelas, mg, '', '', ''])], widths: [14, 28, 9, 14, 12, 14, 24], colStyle: { 0: T5 } },
+        P([['Kolom', 'Penjelasan'], ['Format', 'Satu baris per pembayaran per minggu. Daftar siswa sudah terisi dari aplikasi; hapus baris siswa yang tidak membayar.'], ['Minggu', 'Tanggal mana saja di minggu yang dibayar (Senin sampai Minggu), misal 2026-11-09. Bila kosong, minggu diambil dari Tanggal Bayar.'], ['Jumlah', 'Nominal rupiah. Kosong = iuran per minggu di Pengaturan.'], ['Tanggal Bayar', 'Tanggal uang diterima. Bila kosong, memakai tanggal minggu.'], ['Kas Kelas', 'Setiap pembayaran yang diimpor otomatis tercatat sebagai pemasukan di Kas Kelas.'], ['Impor ulang', 'Pembayaran minggu yang sudah tercatat dilewati atau diperbarui sesuai pilihan saat impor.']])];
     }
     if (kind == 'absensi') return [
       { name: 'Absensi', rows: [['NIS', 'Nama', 'Kelas', 'Tanggal', 'Status'], ...sis.map(s => [String(s.nis), s.nama, s.kelas, { d: today() }, ''])], widths: [14, 28, 9, 14, 10], colStyle: { 0: T5, 3: D2 } },

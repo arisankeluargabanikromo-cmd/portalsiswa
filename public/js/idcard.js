@@ -387,6 +387,25 @@ ${rows(items, fitCls(items))}
     kosong() { SEL.clear(); refresh() },
     bad(el) { el.outerHTML = MARK },
 
+    // Kartu satu siswa untuk Beranda akun Siswa: SELALU lanskap, tanpa mengubah pilihan tampilan galeri (O.ori) di perangkat ini.
+    hero(id, side) {
+      const s = find(id); if (!s) return '';
+      const prev = O.ori; O.ori = 'lan';
+      try { return card(s, side == 'belakang' ? 'belakang' : 'depan') } finally { O.ori = prev }
+    },
+
+    // Pratinjau kartu sendiri untuk akun Siswa: depan dan belakang, lanskap, hanya tombol Tutup
+    lihat(id) {
+      const s = find(id); if (!s) return;
+      const d = $('#dlg');
+      d.innerHTML = `<h3>Kartu Pelajar · ${esc(s.nama)}</h3>
+<div class="idpair lan"><figure><div class="idc-w">${IDC.hero(id, 'depan')}</div><figcaption>Depan</figcaption></figure><figure><div class="idc-w">${IDC.hero(id, 'belakang')}</div><figcaption>Belakang</figcaption></figure></div>
+<div class="acts idacts"><button type="button" id="x" class="idx">Tutup</button></div>`;
+      d.classList.add('idd'); d.showModal();
+      d.addEventListener('close', () => d.classList.remove('idd'), { once: true });
+      $('#x').onclick = () => d.close();
+    },
+
     // Pratinjau satu siswa (depan dan belakang)
     one(id) {
       const s = find(id); if (!s) return;
