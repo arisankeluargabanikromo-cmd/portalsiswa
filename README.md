@@ -16,6 +16,7 @@ sekolahhub/
 │  ├─ js/theme.js          ← pemilih tema terang / gelap / ikuti perangkat (dimuat di <head>)
 │  ├─ js/pengaturan.js     ← halaman Pengaturan: identitas + logo, hak akses, data & cadangan, akun, reset
 │  ├─ js/import.js         ← impor data dari Excel (.xlsx) / CSV + template
+│  ├─ js/akun.js           ← manajemen akun: persetujuan terpandu, peran, tautan siswa, sambutan akun portal
 │  ├─ js/idcard.js         ← kartu ID siswa: pembuat QR, desain kartu, galeri, sistem cetak A4 / CR80
 │  ├─ vendor/fflate.min.js ← pustaka zip (MIT) untuk membaca/menulis .xlsx
 │  ├─ js/auth.js           ← layar masuk / daftar / menunggu persetujuan
@@ -26,7 +27,7 @@ sekolahhub/
 │  ├─ js/config.js         ← URL dan anon key Supabase
 │  └─ vendor/supabase.js   ← supabase-js 2.45.4 (di-host sendiri)
 ├─ supabase/schema.sql     ← tabel, aturan keamanan (RLS), peran
-├─ supabase/migrations/    ← migrasi untuk database yang sudah berjalan (006 = tema per akun, 007 = logo & identitas)
+├─ supabase/migrations/    ← migrasi untuk database yang sudah berjalan (006 = tema per akun, 007 = logo & identitas, 008 = kop instansi kartu ID, 009 = NIP kepala sekolah, 010 = akun siswa, 011 = akses menu siswa, 012 = iuran mingguan)
 ├─ supabase/tests/         ← skrip uji keamanan (RLS)
 ├─ scripts/gen-config.js   ← menulis config.js dari environment variable
 ├─ vercel.json             ← build dan header keamanan
@@ -84,6 +85,35 @@ Di layar ≤ 860px aplikasi tampil seperti aplikasi Android native bergaya Gojek
 
 Menambah layanan baru: tambahkan satu entri di `NAV` pada `app.js`. Grid dan sheet **Semua layanan** mengambilnya otomatis. Warna ikon layanan di `COL` memakai token warna yang sama dan nama pendek di `SHORT` pada `mobile.js`.
 
+## Akun siswa dan persetujuan akun
+
+Setiap siswa dapat memiliki akun sendiri dengan peran **Siswa**: akun itu **hanya-baca**. Beranda menampilkan **kartu pelajar lanskap (halaman depan)** di bagian paling atas; ketuk untuk melihat depan dan belakang. Di bawah kartu ada **Ringkasan Anda**, tampilan analitik seperti dashboard kelas (KPI, arus tabungan, radar profil, gauge kehadiran/iuran/menabung, status iuran, rekap kehadiran) yang seluruhnya dihitung dari data siswa itu sendiri. Seluruh menu **Keuangan** (Tabungan, Kas Kelas, Iuran, Pengingat) dan **Kelas** (Data Siswa, Struktur Kelas, Absensi, Agenda, Pengumuman, Voting) dapat dibuka dengan tampilan khusus siswa (`js/siswa.js`). Data pribadi, tabungan, iuran, dan absensi hanya milik siswa yang tertaut; kas kelas, struktur kelas, dan hasil voting terlihat untuk seluruh kelas (migrasi 011), lengkap dengan nama teman sekelas saja. Siswa tidak bisa memberi suara, menulis, atau melihat riwayat aktivitas dan data pribadi siswa lain. Berbeda dengan peran *Hanya lihat* yang melihat seluruh kelas.
+
+**Migrasi 011 (akses menu Siswa).** Database yang sudah berjalan: jalankan `supabase/migrations/011_akses_menu_siswa.sql` sekali di SQL Editor setelah migrasi 010 (instalasi baru sudah termasuk di `schema.sql`). Aman dijalankan ulang. Tanpa migrasi 011, Kas Kelas, Struktur Kelas, dan Voting tampil kosong di akun Siswa; menu lain tetap berfungsi.
+
+**Alur:**
+1. Siswa (atau orang tua/guru) mendaftar di layar masuk dan memilih **Saya mendaftar sebagai** Siswa / Orang tua / Guru-staf, dengan NIS bila ada. Akun berstatus *Menunggu* dan belum bisa membuka data apa pun.
+2. Admin membuka **Pengguna** atau *Pengaturan > Hak akses* dan memilih **Tinjau & setujui**. Dialog menampilkan klaim pendaftar yang sudah **dicocokkan otomatis ke data siswa** (lencana *Cocok* atau *NIS tidak ditemukan*), lalu admin menentukan peran dan siswa yang ditautkan dalam satu langkah.
+3. Setelah disetujui, saat pertama kali masuk akun portal melihat dialog sambutan yang menjelaskan hak aksesnya, lalu **Portal Siswa** (atau Portal Orang Tua).
+
+**Prinsip keamanan:**
+- Klaim saat mendaftar hanyalah **saran untuk admin**; tidak pernah memberi akses. Admin tetap memverifikasi.
+- Aturan ditegakkan **di database**, bukan hanya di tampilan: kebijakan RLS, trigger, dan fungsi `approve_account` (satu transaksi, hanya admin). Akun siswa wajib tertaut ke **tepat satu** siswa, dan satu siswa hanya boleh punya **satu** akun siswa. Orang tua boleh tertaut ke beberapa anak.
+- Mengganti peran lewat jalur mana pun otomatis menyesuaikan tautan; peran non-portal otomatis kehilangan tautan. **Cabut akses** mengembalikan akun ke *Menunggu* dan menghapus tautannya tanpa menghapus akun.
+- Admin tidak dapat mengubah peran akunnya sendiri. Persetujuan mencatat siapa dan kapan (`disetujui_oleh`, `disetujui_pada`) dan masuk ke riwayat aktivitas.
+- Di profil siswa (admin) terlihat status akun siswa, jumlah akun orang tua, dan pendaftar menunggu yang mengklaim NIS siswa itu.
+
+**Migrasi 010 (wajib untuk peran Siswa).** Database yang sudah berjalan: jalankan `supabase/migrations/010_akun_siswa.sql` sekali di SQL Editor, setelah migrasi 003 dan 005 (instalasi baru sudah termasuk di `schema.sql`). Aman dijalankan ulang, tautan orang tua yang ada tetap berfungsi. Tanpa migrasi, aplikasi tetap berjalan: opsi *Siswa* dinonaktifkan dan persetujuan memakai jalur lama.
+
+**Iuran mingguan (migrasi 012, wajib).** Iuran kini dibayar **per minggu** (Senin sampai Minggu), bukan per bulan. Jalankan `supabase/migrations/012_iuran_mingguan.sql` sekali di SQL Editor (instalasi baru sudah termasuk di `schema.sql`); tanpa migrasi, menu Iuran menampilkan petunjuk dan tidak menyimpan apa pun.
+- **Nominal:** *Pengaturan → Iuran kelas per minggu*. Nilai lama (per bulan) tidak dikonversi; sesuaikan angkanya.
+- **Mencatat:** menu Iuran menampilkan kolom per minggu untuk satu bulan; klik sel untuk mencatat atau membatalkan. Tombol *Lunaskan semua minggu ini* mencatat nominal bawaan untuk semua siswa (kelas terpilih) yang belum membayar. Minggu dihitung ke bulan dari hari Senin-nya.
+- **Sinkron ke Kas Kelas:** setiap pembayaran mingguan otomatis menjadi satu baris *Pemasukan* di Kas Kelas (label *Otomatis dari Iuran*). Membatalkan pembayaran, mengimpor, menghapus siswa, atau memulihkan cadangan memperbarui kas dengan sendirinya. Baris otomatis tidak bisa dihapus dari Kas Kelas.
+- **Data lama:** iuran bulanan sebelumnya tetap tersimpan dan tetap dihitung di total tahunan, tetapi tidak dimasukkan ke Kas Kelas (agar tidak ganda dengan catatan kas manual).
+- **Impor Excel:** format daftar (NIS/Nama, Minggu, Jumlah, Tanggal Bayar); matriks bulanan tidak dipakai lagi. Pengingat WhatsApp, dashboard, dan portal siswa/orang tua kini menilai iuran **minggu berjalan**; pesan memakai `{minggu}` selain `{bulan}`.
+
+**Pengujian akses.** Jalankan `supabase/tests/akses_siswa_check.sql` di SQL Editor setelah migrasi 011. Skrip membuat data uji sementara, memeriksa isolasi data akun siswa, orang tua, viewer, dan pending (termasuk bahwa siswa tidak bisa menulis, menaikkan perannya, atau menautkan dirinya ke siswa lain), lalu membatalkan semuanya otomatis. Hasil ada di pesan *HASIL UJI AKSES SISWA*. Catatan: siswa yang lulus (dihapus lewat *Tahun ajaran baru*) membuat akun siswanya kehilangan tautan; cabut akses akun itu dari halaman Pengguna.
+
 ## Portal orang tua
 
 Orang tua mendaftar sendiri dari halaman login. Admin membuka menu **Pengguna**, mengubah peran akun itu menjadi `ortu`, lalu menekan **Atur** untuk menautkan satu atau lebih anak. Orang tua hanya melihat saldo, iuran, kehadiran, dan transaksi anaknya sendiri, ditambah pengumuman dan agenda. Pembatasan ini dijaga oleh Row Level Security di database, jadi orang tua tidak bisa membuka data siswa lain walau memakai alat selain aplikasi ini.
@@ -100,18 +130,26 @@ Foto profil dan sampul disimpan di **Supabase Storage** (bucket privat `foto-sis
 
 ## Kartu ID siswa
 
+**Hak akses.** Galeri dan pencetakan Kartu ID tersedia untuk admin, pengurus, dan viewer. Akun **Siswa** dan **Orang tua** tidak melihat menu Kartu ID (halaman Data Siswa tidak dapat dibuka oleh peran portal).
+
 Buka **Data Siswa → tab Kartu ID**. Kartu juga bisa dibuka per siswa lewat tombol **Kartu** di tabel dan **Kartu ID** di profil siswa. Tidak perlu migrasi database.
 
 **Isi kartu**
 
 | Sisi | Isi |
 |---|---|
-| Depan | Logo dan nama sekolah, foto siswa (kembali ke inisial bila foto kosong atau gagal dimuat), nama, kelas, NIS, NISN, tahun ajaran |
-| Belakang | Kode QR berisi NIS, tempat/tanggal lahir, jenis kelamin, golongan darah, alamat, kontak wali (tiga yang terakhir bisa dimatikan), keterangan bila kartu ditemukan (alamat dan telepon sekolah), nama kepala sekolah dengan ruang tanda tangan |
+| Depan | **Kop** rata tengah (logo, instansi induk, nama sekolah, alamat sekolah), judul kecil **KARTU PELAJAR**, foto berbingkai lingkaran (kembali ke inisial bila foto kosong atau gagal dimuat), **barcode Code 128** berisi NIS, lalu baris Nama, NIS, Jenis Kelamin, Lahir, Alamat siswa, dan strip tahun ajaran |
+| Belakang | Kop yang sama seperti depan, **dua kode QR sejajar** (QR **NIS** dan QR **WhatsApp wali**, masing-masing dengan keterangan dan nomor), **ketentuan penggunaan kartu**, dan **tanda tangan kepala sekolah** (nama dan NIP). Semua rata tengah. Tidak memuat data lain |
 
-Data diambil dari data siswa dan *Pengaturan > Umum* (logo, nama sekolah, tahun ajaran, kepala sekolah, alamat, telepon). Karena itu isi lengkap lebih dulu bila ingin sisi belakang terisi penuh. Nama panjang mengecil otomatis dan membungkus hingga tiga baris.
+Data diambil dari data siswa dan *Pengaturan > Umum* (logo, nama sekolah, instansi induk, alamat sekolah, tahun ajaran). Semua teks kop dan data **tidak pernah dipotong**: ukuran huruf mengecil bertahap dan teks membungkus ke baris berikutnya bila panjang.
 
-**Tampilan:** enam pilihan warna, orientasi potret atau lanskap, pratinjau depan atau belakang, dan pilihan data di sisi belakang. Pilihan disimpan per perangkat (`localStorage`, kunci `sh.idcard`). Pencarian, saringan kelas, dan saringan **Belum ada foto** memudahkan memeriksa kelengkapan sebelum mencetak. Tombol cetak berbunyi *Cetak semua* atau *Cetak terpilih* sesuai pilihan.
+**Kop instansi:** baris kop di atas nama sekolah (depan dan belakang) diisi di **Pengaturan > Umum > Instansi induk (kop kartu ID)**, misalnya `PEMERINTAH KABUPATEN MADIUN`. Nama sekolah di bawahnya diambil dari kolom *Nama sekolah* di halaman yang sama, jadi tulis lengkap dan benar (misalnya `SMP NEGERI 1 WONOASRI`). Kolom ini butuh **migrasi 008**: jalankan `supabase/migrations/008_kop_instansi.sql` sekali di SQL Editor (instalasi baru sudah termasuk di `schema.sql`). Tanpa migrasi atau bila dikosongkan, kartu tetap tercetak tanpa baris kop. Teks kop mengecil otomatis bila panjang.
+
+**QR WhatsApp wali:** berisi tautan `https://wa.me/<nomor>` dari kolom *Kontak wali* siswa (nomor `08…` otomatis diubah ke `62…`). Bila dipindai, WhatsApp langsung membuka chat ke wali. Bila siswa tidak punya nomor, hanya QR NIS yang dicetak. Bila nomornya bukan nomor seluler yang valid untuk WhatsApp, nomor tampil sebagai teks *Kontak Wali* tanpa QR. QR ini bisa dimatikan lewat opsi **WhatsApp wali (belakang)** di tab Kartu ID.
+
+**Tanda tangan:** nama kepala sekolah diambil dari *Pengaturan > Umum > Kepala sekolah*, NIP dari **NIP kepala sekolah** di halaman yang sama. NIP butuh **migrasi 009**: jalankan `supabase/migrations/009_nip_kepsek.sql` sekali di SQL Editor (instalasi baru sudah termasuk di `schema.sql`). Tanpa migrasi atau bila NIP kosong, hanya nama yang dicetak. Bila nama juga kosong, kartu menyediakan garis titik agar bisa diisi tangan. Ruang tanda tangan dibiarkan kosong untuk tanda tangan basah atau stempel.
+
+**Tampilan:** desain mengikuti contoh kartu pelajar bergradien (lanskap sebagai bawaan; potret memakai bahasa desain yang sama). Enam pilihan warna gradien, orientasi potret atau lanskap, pratinjau depan atau belakang, dan pilihan data tambahan (alamat siswa di depan, kontak wali di belakang). Pilihan disimpan per perangkat (`localStorage`, kunci `sh.idcard`). Pencarian, saringan kelas, dan saringan **Belum ada foto** memudahkan memeriksa kelengkapan sebelum mencetak. Tombol cetak berbunyi *Cetak semua* atau *Cetak terpilih* sesuai pilihan.
 
 **Mencetak** (hanya admin dan pengurus; peran lain bisa melihat pratinjau):
 
@@ -126,11 +164,11 @@ Pengaturan di jendela cetak peramban: skala **100%**, margin **Tidak ada**, akti
 
 **Catatan teknis**
 
-- Kode QR dibuat oleh `idcard.js` sendiri (mode byte, koreksi kesalahan M, versi 1 sampai 6) tanpa pustaka luar. Isinya hanya NIS, tanpa data pribadi lain, sehingga bisa dipakai untuk pemindaian absensi di kemudian hari. Pembuat QR sudah diuji terbaca pemindai untuk semua versi.
+- Kode QR (belakang) dan barcode Code 128 (depan) dibuat oleh `idcard.js` sendiri tanpa pustaka luar. Keduanya hanya berisi NIS, tanpa data pribadi lain, sehingga bisa dipakai untuk pemindaian absensi di kemudian hari. QR (versi 1 sampai 6) sudah diuji terbaca pemindai; tabel Code 128 sudah dicocokkan dengan pustaka pembanding. NIS angka memakai set C agar barcode rapat dan mudah dipindai.
 - Ukuran kartu memakai satuan milimeter yang diturunkan dari lebar kartu (`cqw`), jadi desain yang sama tampil identik di layar dan di kertas. Warna kartu sengaja tetap (tidak mengikuti tema terang/gelap) karena kartu adalah media cetak.
 - Semua kelas CSS internal kartu berawalan `ic-` agar tidak bentrok dengan kelas lain (`style.css` sudah memakai `.hd`, `.kv`, `.pg`, dan `.fr` untuk profil siswa).
 - Foto kartu diambil dari URL bertanda tangan Supabase Storage yang sama dengan profil. Bila foto tidak tampil di kartu, jalankan *Pengaturan > Data > Tes tampilan foto*.
-- Format foto tersimpan persegi (320 x 320 px) dan ditampilkan dengan rasio 4:5, sehingga sedikit bagian samping terpotong. Gunakan foto dengan wajah di tengah.
+- Foto tersimpan persegi (320 x 320 px) dan ditampilkan dalam bingkai lingkaran. Gunakan foto dengan wajah di tengah.
 
 ## Uji keamanan
 
