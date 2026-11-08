@@ -19,8 +19,34 @@
 <link rel="stylesheet" href="css/bank.css">
 <link rel="stylesheet" href="css/statement.css">
 <script src="js/theme.js"></script>
+<style>
+/* Layar pembuka: tampil seketika dari salinan merek di perangkat, menutupi layar kosong sampai data siap, lalu memudar. */
+#splash{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--tx);transition:opacity .3s ease,visibility .3s}
+#splash.off{opacity:0;visibility:hidden;pointer-events:none}
+#splash .sl{width:96px;height:96px;padding:8px;border-radius:24%;background:#fff;object-fit:contain;box-shadow:0 10px 28px rgba(0,0,0,.18)}
+#splash b{font-size:15px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;max-width:min(420px,90vw);overflow-wrap:anywhere}
+#splash i{width:26px;height:26px;border:3px solid color-mix(in srgb,var(--pr) 25%,transparent);border-top-color:var(--pr);border-radius:50%;animation:spl .8s linear infinite}
+@keyframes spl{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#splash i{animation-duration:2.4s}#splash{transition:none}}
+</style>
 </head>
 <body>
+<div id="splash" role="status" aria-live="polite" aria-label="Memuat"></div>
+<script>
+(function(){
+  var s=document.getElementById('splash'),u='',n='';
+  /* Identitas di splash hanya dipakai bila ada sesi login (salinannya disegarkan setiap sesi). Tanpa sesi, salinan bisa sudah usang
+     (logo diganti admin), jadi splash netral dan kop terbaru tampil langsung di layar masuk. */
+  try{var ss=false;for(var i=0;i<localStorage.length;i++){if(/^sb-.*-auth-token/.test(localStorage.key(i))){ss=true;break}}
+    if(ss){u=localStorage.getItem('sh.logo')||'';n=localStorage.getItem('sh.school')||''}}catch(e){}
+  if(u){var im=new Image();im.className='sl';im.alt='';im.decoding='sync';im.src=u;s.appendChild(im);
+    var f=document.querySelector('link[rel=icon]');if(f)f.href=u}
+  if(n){var b=document.createElement('b');b.textContent=n;s.appendChild(b)}
+  s.appendChild(document.createElement('i'));
+  window.hideSplash=function(){var e=document.getElementById('splash');if(!e)return;e.classList.add('off');setTimeout(function(){e.remove()},400)};
+  setTimeout(window.hideSplash,10000);   // pengaman bila terjadi galat tak terduga
+})();
+</script>
 <div class="shell"><nav id="nav"></nav><div class="col"><header id="top" hidden></header><main id="app"></main></div></div>
 <dialog id="dlg"></dialog>
 <div id="toast"></div>
