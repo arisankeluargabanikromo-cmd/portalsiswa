@@ -366,21 +366,36 @@ html.tfx *,html.tfx *::before,html.tfx *::after{transition:background-color .3s 
 @media(max-width:600px){.drw{flex-direction:column;align-items:stretch}.drw>button{width:100%}.lgi{min-width:0}.mx{grid-template-columns:minmax(0,2.3fr) repeat(5,minmax(0,1fr))}.mx>div{padding:9px 6px;font-size:12px}.mx>.mh{font-size:11px}.mx>.c{padding:9px 2px}}
 @media print{.sx,.sav{display:none!important}}
 
-/* ===== Layar masuk: panel merek + form ===== */
-.ash{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);width:min(960px,100%);min-height:min(620px,calc(100dvh - 48px));border-radius:26px;overflow:hidden;background:var(--sf2);border:1px solid var(--bd2);box-shadow:var(--shd)}
-.abr{position:relative;display:flex;flex-direction:column;gap:30px;padding:40px 40px 36px;color:var(--abx);background:var(--abg);overflow:hidden;isolation:isolate}
+/* ===== Layar masuk: kop sekolah + form (ukuran kotak Masuk = Daftar) ===== */
+.ash{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);width:min(1000px,100%);height:min(760px,calc(100dvh - 48px));min-height:560px;border-radius:26px;overflow:hidden;background:var(--sf2);border:1px solid var(--bd2);box-shadow:var(--shd)}
+.abr{position:relative;display:flex;flex-direction:column;align-items:center;gap:22px;padding:30px 40px 34px;color:var(--abx);background:var(--abg);overflow:hidden;isolation:isolate;min-height:0}
 .abr::before,.abr::after{content:'';position:absolute;border-radius:50%;background:var(--abc);z-index:-1}
 .abr::before{width:340px;height:340px;right:-130px;top:-120px}.abr::after{width:230px;height:230px;left:-90px;bottom:-80px}
 :root[data-theme=light] .abr .bm .lr{fill:#ffffff}:root[data-theme=light] .abr .bm .lg{fill:var(--pr)}:root[data-theme=light] .abr .bm .lt{stroke:var(--pr)}
-.abt{display:flex;align-items:center;gap:12px}.abt b{display:block;font-size:19px;letter-spacing:-.01em}.abt small{display:block;font-size:13px;color:var(--abx2)}
-.abh{margin-top:auto}.abh2{margin:0 0 10px;font-size:28px;line-height:1.2;font-weight:800;letter-spacing:-.02em}.abh3{margin:0;font-size:14.5px;line-height:1.55;color:var(--abx2)}
-.abf{list-style:none;margin:0;padding:0;display:grid;gap:14px}.abf li{display:flex;gap:12px;align-items:flex-start}
-.abi{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--abi)}
-.abf b{display:block;font-size:14px}.abf small{display:block;font-size:12.5px;line-height:1.4;color:var(--abx2)}
-.afm{display:flex;align-items:center;padding:44px 48px;background:var(--sf2)}
-.afc{width:100%;max-width:380px;margin:0 auto}
+.abt{align-self:flex-start}
+.abn{display:inline-block;max-width:100%;padding:6px 14px;border-radius:999px;background:var(--abi);font-size:13px;font-weight:700;letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Kop sekolah */
+.abk{display:flex;flex-direction:column;align-items:center;text-align:center;width:100%;max-width:400px;margin:auto 0}
+.abl{margin-bottom:18px}
+.abl .bt{border-radius:26%;box-shadow:0 12px 32px rgba(0,0,0,.28)}
+.abl .bt.has{border:0;background:#fff}
+.abki{font-size:12.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--abx2);margin-bottom:6px;overflow-wrap:anywhere}
+.abks{margin:0;font-size:25px;line-height:1.22;font-weight:800;letter-spacing:.01em;text-transform:uppercase;overflow-wrap:anywhere}
+.abks.app{text-transform:none;letter-spacing:-.01em}
+.abka{margin:8px 0 0;font-size:13px;line-height:1.5;color:var(--abx2);overflow-wrap:anywhere}
+.abru{display:block;width:100%;height:5px;margin-top:18px;border-top:2px solid var(--abx);border-bottom:1px solid var(--abx);opacity:.55}
+.abh{width:100%;max-width:400px;text-align:center}.abh2{margin:0 0 8px;font-size:19px;line-height:1.3;font-weight:800;letter-spacing:-.01em}.abh3{margin:0;font-size:13.5px;line-height:1.55;color:var(--abx2)}
+.abf{list-style:none;margin:0;padding:0;display:grid;gap:12px;width:100%;max-width:400px}.abf li{display:flex;gap:12px;align-items:flex-start;text-align:left}
+.abi{flex:none;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--abi)}
+.abf b{display:block;font-size:13.5px}.abf small{display:block;font-size:12.5px;line-height:1.4;color:var(--abx2)}
+/* Panel form: tinggi kotak tetap; isi menggulir di dalam bila layar pendek */
+.afm{display:block;padding:36px 48px;background:var(--sf2);overflow-y:auto;min-height:0}
+.afc{display:flex;flex-direction:column;width:100%;max-width:380px;min-height:100%;margin:0 auto}
+.afc.mid{justify-content:center}
+.afc>form{flex:1;display:flex;flex-direction:column}
+.afbd{flex:1;display:flex;flex-direction:column;justify-content:center}
 .afc h1{margin:0 0 6px;font-size:26px;font-weight:800;letter-spacing:-.02em}.afs{margin:0;color:var(--mu);font-size:14px;line-height:1.5}
-.aseg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:14px;background:var(--w2);margin:22px 0 20px}
+.aseg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:14px;background:var(--w2);margin:20px 0 18px}
 .aseg button,.aseg button:hover{border:0;background:transparent;border-radius:10px;min-height:38px;padding:8px;font-weight:600;color:var(--mu);box-shadow:none}
 .aseg button[aria-selected=true],.aseg button[aria-selected=true]:hover{background:var(--sf2);color:var(--tx);box-shadow:var(--sh)}
 .af{margin:0 0 14px}.af label{margin:0 0 6px;font-size:13px}
@@ -397,21 +412,37 @@ html.tfx *,html.tfx *::before,html.tfx *::after{transition:background-color .3s 
 .afb.busy::before{content:'';width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:afs .7s linear infinite}
 @keyframes afs{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.afb.busy::before{animation:none}}
-.afn{margin:18px 0 0;font-size:12.5px;line-height:1.55;color:var(--mu)}
+.afn{margin:auto 0 0;padding-top:14px;font-size:12.5px;line-height:1.55;color:var(--mu)}
+.afb+.afn,.afg+.afn{margin-top:18px}
 .aic{display:grid;place-items:center;width:56px;height:56px;border-radius:18px;margin-bottom:18px;background:color-mix(in srgb,var(--pr) 14%,transparent);color:var(--pr)}
 .aem{display:flex;align-items:center;gap:8px;margin:18px 0;padding:11px 14px;border-radius:12px;background:var(--w2);font-size:14px;font-weight:600;word-break:break-all}.aem svg{flex:none;color:var(--mu)}
 
-/* Layar masuk di ponsel & tablet kecil: header merek + lembar form */
+
+/* Layar pendek (laptop kecil, ponsel landscape): rapatkan jarak agar form Daftar muat tanpa menggulir */
+@media(min-width:861px) and (max-height:900px){.afm{padding:26px 44px}.aseg{margin:14px 0 12px}.abf{display:none}.afc h1{font-size:24px}.af{margin-bottom:9px}#auth .afi input{height:44px}.amsg{min-height:16px;margin-bottom:6px}.afb{min-height:46px}.afn{padding-top:10px}}
+@media(min-width:861px) and (max-height:720px){
+  .abr{gap:14px;padding:24px 36px 26px}.abl{margin-bottom:12px}.abl .bt{width:104px!important;height:104px!important}.abks{font-size:22px}
+}
+@media(min-width:861px) and (max-height:640px){.abh{display:none}}
+
+/* Layar masuk di ponsel & tablet kecil: kop sekolah di atas, lembar form di bawah */
 @media(max-width:860px){
-  #auth{place-items:stretch;padding:0;background:var(--bg)}
-  .ash{grid-template-columns:1fr;grid-template-rows:auto 1fr;width:100%;min-height:100%;border:0;border-radius:0;box-shadow:none;background:transparent}
-  .abr{gap:16px;padding:calc(30px + env(safe-area-inset-top,0px)) 24px 62px}
-  .abh{margin-top:0}.abh2{font-size:23px;margin-bottom:0}.abh3,.abf{display:none}
-  .afm{align-items:flex-start;margin-top:-30px;position:relative;border-radius:28px 28px 0 0;padding:28px 22px calc(28px + env(safe-area-inset-bottom,0px));background:var(--s2,var(--sf2))}
-  .afc{max-width:440px}.afc h1{font-size:24px}
+  #auth{display:block;padding:0;background:var(--bg);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  .ash{display:flex;flex-direction:column;width:100%;height:auto;min-height:100%;border:0;border-radius:0;box-shadow:none;background:transparent;overflow:visible}
+  .abr{flex:none}
+  .abr{gap:0;padding:calc(18px + env(safe-area-inset-top,0px)) 20px 56px}
+  .abt{position:absolute;left:16px;top:calc(16px + env(safe-area-inset-top,0px));max-width:calc(100% - 96px)}
+  .abk{margin:34px 0 0;max-width:440px}.abl{margin-bottom:14px}.abl .bt{width:96px!important;height:96px!important}
+  .abki{font-size:11.5px}.abks{font-size:20px}.abka{font-size:12.5px}.abru{margin-top:14px}
+  .abh,.abf{display:none}
+  .afm{margin-top:-30px;position:relative;border-radius:28px 28px 0 0;padding:26px 22px calc(32px + env(safe-area-inset-bottom,0px));background:var(--s2,var(--sf2));overflow:visible;flex:1 0 auto}
+  .afc{max-width:440px;min-height:0}.afc h1{font-size:23px}
+  .afbd{justify-content:flex-start}
   #auth .afi input{height:52px;font-size:16px}
+  #auth>.thf{position:absolute;z-index:3}
   .thf{background:var(--lgb);color:var(--lgt);border-color:transparent}
 }
+@media(max-width:380px){.abl .bt{width:84px!important;height:84px!important}.abks{font-size:18px}.afm{padding-left:16px;padding-right:16px}.arole button{font-size:12.5px}}
 
 /* ===== Impor Excel / CSV ===== */
 dialog.imp{width:min(880px,96vw)}

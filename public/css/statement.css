@@ -1,0 +1,314 @@
+/* SekolahHub: tampilan keuangan bergaya rekening koran (statement.js). Dimuat setelah bank.css.
+   Dua bagian:
+   A. Tampilan layar (halaman Tabungan, Kas Kelas, Iuran, Pengingat, Laporan): memakai token tema terang/gelap dari style.css.
+   B. Kertas dokumen (.pp): rekening koran, buku kas, laporan, rekap. Kertas SELALU putih dengan huruf Arial karena media cetak fisik,
+      jadi warnanya memakai token --pp-* di bawah (pengecualian yang sama seperti kartu ID di idcard.css), tidak mengikuti tema gelap.
+   Titik henti: 860px (sama dengan mobile.css) untuk halaman, 640px untuk kertas di dalam dialog. */
+
+:root{
+  --pp-bg:#fff;--pp-tx:#161a22;--pp-mu:#586273;--pp-ln:#d9dee6;--pp-ln2:#aab3c0;
+  --pp-band:#a9c3e7;--pp-bt:#10213f;--pp-zebra:#f5f7fb;--pp-in:#17683a;--pp-er:#a3302a;
+  --pp-f:Arial,"Liberation Sans",Helvetica,sans-serif;
+}
+
+/* ================= A. LAYAR ================= */
+
+/* ---- Ringkasan angka: satu pita berisi 3-4 sel, seperti blok saldo di rekening koran ---- */
+.stsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin:0 0 16px;border:1px solid var(--br);border-radius:16px;background:var(--sf);box-shadow:var(--sh),inset 0 1px 0 var(--edge);overflow:hidden}
+.stsum>div{min-width:0;padding:14px 18px;border-left:1px solid var(--ln)}
+.stsum>div:first-child{border-left:0}
+.stsum span{display:block;font-size:12.5px;font-weight:600;color:var(--mu)}
+.stsum b{display:block;margin-top:3px;font-size:22px;font-weight:800;line-height:1.2;letter-spacing:-.01em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stsum small{display:block;margin-top:2px;font-size:12px;color:var(--mu);line-height:1.4}
+.stsum .hero b{color:var(--pr)}
+.stsum .in b{color:var(--ok)}.stsum .out b{color:var(--er)}
+
+/* ---- Tab segmented (Rekening / Mutasi / Penutupan harian, jenis pengingat, jenis laporan) ---- */
+.bk-tabs{display:inline-flex;max-width:100%;gap:2px;margin:0 0 14px;padding:4px;overflow-x:auto;border:1px solid var(--br);border-radius:14px;background:var(--w2);scrollbar-width:none}
+.bk-tabs::-webkit-scrollbar{display:none}
+.bk-tabs button,.bk-tabs button:hover{flex:none;border:0;border-radius:10px;padding:7px 16px;background:transparent;color:var(--mu);font-weight:600;box-shadow:none}
+.bk-tabs button:hover{color:var(--tx)}
+.bk-tabs button.on,.bk-tabs button.on:hover{background:var(--sf2);color:var(--pr);font-weight:700;box-shadow:var(--shb)}
+
+/* ---- Kartu tabel: tanpa padding agar pita header penuh ---- */
+.card.stcard{padding:0;overflow:hidden}
+.stcard>.tw{margin:0}
+.stcard .stn{margin:0;padding:12px 18px;border-top:1px solid var(--ln);font-size:12.5px;color:var(--mu);line-height:1.5}
+.stcard .stn .bk-kol{margin-left:10px}.stcard .stn .bk-kol:first-child{margin-left:0}
+.sth2{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:22px 2px 10px}.sth2 h3{margin:0;font-size:16px}
+
+/* ---- Tabel buku (stm): pita header, tanggal dua baris, angka rata kanan ---- */
+.stm{width:100%;border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}
+.stm th{padding:10px 10px;background:color-mix(in srgb,var(--pr) 13%,var(--sf2));color:var(--tx);font-size:12.5px;font-weight:700;letter-spacing:0;border-bottom:1px solid var(--bd2);white-space:nowrap}
+.stm td{padding:11px 10px;border-bottom:1px solid var(--ln);vertical-align:top;font-size:13.5px;line-height:1.45}
+.stm tbody tr:last-child td{border-bottom:0}
+.stm tbody tr:hover td{background:var(--w1)}
+.stm th.r,.stm td.r{text-align:right}
+.stm td.r{white-space:nowrap}
+.stm td.d{white-space:nowrap}
+.stm td.d b{display:block;font-size:13px;font-weight:600}
+.stm td.d span,.stm td.sub{display:block;font-size:12px;color:var(--mu)}
+.stm td[data-k=ket],.stm td[data-k=rek],.stm td[data-k=per]{white-space:normal;min-width:170px}
+.stm td .lab{font-size:12px;line-height:1.4}
+.stm td .nm{display:block;font-weight:600}
+.stm td.z{color:var(--mu);opacity:.7}
+.stm tr.void td{opacity:.55}
+.stm tr.void td[data-k=kre],.stm tr.void td[data-k=deb],.stm tr.void td[data-k=amt]{text-decoration:line-through}
+.stm tr.tot td{background:var(--w2);font-weight:700;border-top:1px solid var(--bd2)}
+.stm td.ac{white-space:nowrap}
+.stm td.ac button+button,.stm td.ac button+.tag{margin-left:4px}
+
+/* ---- Matriks iuran: kolom nama menempel, bisa digeser ---- */
+.mtx{min-width:660px}
+.mtx th,.mtx td{padding:9px 10px}
+.mtx th.w{text-align:center;white-space:normal;line-height:1.25;min-width:74px}
+.mtx th.w small{display:block;font-weight:500;font-size:11px;color:var(--mu)}
+.mtx td.w{text-align:center}
+.mtx td:first-child,.mtx th:first-child{position:sticky;left:0;z-index:1;background:var(--sf2);box-shadow:inset -1px 0 0 var(--ln)}
+.mtx th:first-child{background:color-mix(in srgb,var(--pr) 13%,var(--sf2))}
+.mtx tbody tr:hover td:first-child{background:var(--sf2)}
+.mtx td[data-k=nama]{white-space:nowrap;font-weight:600;min-width:150px}
+.mtx button.cell{min-width:40px;min-height:32px}
+.mtx button.cell.in{border-color:color-mix(in srgb,var(--ok) 45%,transparent);background:color-mix(in srgb,var(--ok) 12%,transparent)}
+
+/* ---- Toolbar halaman keuangan ---- */
+body[data-v=tabungan] .bar,body[data-v=kas] .bar,body[data-v=iuran] .bar,body[data-v=pengingat] .bar,body[data-v=laporan] .pbar{padding:10px;border:1px solid var(--br);border-radius:14px;background:var(--sf)}
+.stbtns{display:contents}
+.bar .stmon{display:inline-flex;align-items:center;gap:4px}
+.bar .stmon b{min-width:128px;text-align:center}
+.bar .stmon button{width:38px;padding:8px 0}
+
+/* ---- Pengingat: nomor dan kekurangan ---- */
+.stm td[data-k=hp]{color:var(--mu)}
+
+/* ---- Laporan: pemilih jenis + tombol aksi + lembar kertas ---- */
+.lp-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px}
+.lp-top .bk-tabs{margin:0}
+.lp-act{display:flex;flex-wrap:wrap;gap:8px}
+.lp-act button{display:inline-flex!important}
+.pp-sheet{margin:0 0 18px;padding:clamp(10px,2.5vw,26px);border:1px solid var(--br);border-radius:18px;background:var(--w2);overflow-x:auto}
+
+/* ================= B. KERTAS DOKUMEN ================= */
+.pp{box-sizing:border-box;width:100%;max-width:860px;margin:0 auto;padding:30px 34px 24px;background:var(--pp-bg);color:var(--pp-tx);border:1px solid var(--pp-ln);border-radius:6px;box-shadow:var(--shp);font:12px/1.45 var(--pp-f);-webkit-font-smoothing:antialiased;text-align:left}
+.pp *{box-sizing:border-box}
+.pp .in{color:var(--pp-in)}.pp .out{color:var(--pp-er)}.pp .mu{color:var(--pp-mu)}
+
+/* Kop: nama sekolah di kiri, logo di kanan (seperti letak logo bank di pojok kanan atas) */
+.pp-h{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding-bottom:12px;border-bottom:1px solid var(--pp-ln2)}
+.pp-org{min-width:0}
+.pp-org i{display:block;font-style:normal;font-size:10.5px;letter-spacing:.04em;color:var(--pp-mu);text-transform:uppercase}
+.pp-org b{display:block;margin-top:1px;font-size:15px;line-height:1.25;overflow-wrap:anywhere}
+.pp-org span{display:block;margin-top:2px;font-size:10.5px;line-height:1.4;color:var(--pp-mu)}
+.pp-lg{flex:none}
+.pp-lg .bt{width:54px!important;height:54px!important;border-radius:12px}
+.pp-lg .bt.has{background:#fff;border-color:var(--pp-ln)}
+.pp-lg .bm .lr{fill:#10213f}.pp-lg .bm .lg{fill:#fff}.pp-lg .bm .lt{stroke:#fff}
+
+/* Judul tengah dua baris: Indonesia + (English) */
+.pp-t{margin:24px 0 20px;text-align:center}
+.pp-t b{display:block;font-size:15px;font-weight:700;line-height:1.35}
+.pp-t span{display:block;font-size:14px;font-weight:700;line-height:1.35}
+.pp-t small{display:block;margin-top:3px;font-size:11px;color:var(--pp-mu)}
+
+/* Blok identitas: label | : kunci | nilai */
+.pp-m{margin:0 0 18px}
+.pp-m>div{display:grid;grid-template-columns:150px 78px minmax(0,1fr);gap:0 4px;padding:2px 0;font-size:12px;line-height:1.5}
+.pp-m span:first-child{color:var(--pp-tx)}
+.pp-m span.w{grid-column:2/-1}
+.pp-m span:last-child{overflow-wrap:anywhere}
+.pp-m b{font-weight:700}
+
+/* Tabel transaksi */
+.pp-tw{margin:0 -4px;overflow-x:auto}
+.pp-tb{width:100%;border-collapse:collapse;font-size:10.5px;line-height:1.4;font-variant-numeric:tabular-nums}
+.pp-tb thead{display:table-header-group}
+.pp-tb th{padding:10px 7px;background:var(--pp-band);color:var(--pp-bt);font-size:11.5px;font-weight:400;font-style:italic;text-align:center;vertical-align:middle;border:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pp-tb th.l{text-align:left}
+.pp-tb th small{display:block;margin-top:1px;font-size:9px;font-style:normal;color:var(--pp-bt)}
+.pp-tb td{padding:7px 7px;border:0;border-bottom:1px solid var(--pp-ln);vertical-align:top;white-space:normal;color:var(--pp-tx);font-size:10.5px}
+.pp-tb tbody tr:nth-child(even) td{background:var(--pp-zebra)}
+.pp-tb tr{break-inside:avoid;page-break-inside:avoid}
+.pp-tb td.d{white-space:nowrap}
+.pp-tb td.d b{display:block;font-weight:400}
+.pp-tb td.d span{display:block;color:var(--pp-tx)}
+.pp-tb td.r{text-align:right;white-space:nowrap}
+.pp-tb td.c{text-align:center}
+.pp-tb td.z{color:var(--pp-mu)}
+.pp-tb td .sub{display:block;margin-top:1px;color:var(--pp-mu);font-size:10px}
+.pp-tb td .rf{font-family:var(--pp-f);font-size:10.5px;color:var(--pp-tx);word-break:break-all}
+.pp-tb tr.void td{color:var(--pp-mu)}
+.pp-tb tr.void td.r{text-decoration:line-through}
+.pp-tb tr.tot td{border-top:1.5px solid var(--pp-tx);border-bottom:1.5px solid var(--pp-tx);background:#fff;font-weight:700}
+.pp-tb tfoot{display:table-footer-group}
+.pp-tb .tag{display:inline-block;margin-left:4px;padding:0 6px;border:1px solid var(--pp-ln2);border-radius:3px;background:#fff;color:var(--pp-mu);font-size:9.5px;font-weight:700}
+.pp-empty{padding:26px 0;text-align:center;color:var(--pp-mu);border-bottom:1px solid var(--pp-ln)}
+
+/* Ringkasan di bawah tabel */
+.pp-sum{display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,1fr));margin:16px 0 0;border:1px solid var(--pp-ln2);break-inside:avoid;page-break-inside:avoid}
+.pp-sum>div{padding:8px 10px;border-left:1px solid var(--pp-ln)}
+.pp-sum>div:first-child{border-left:0}
+.pp-sum span{display:block;font-size:10px;color:var(--pp-mu)}
+.pp-sum b{display:block;margin-top:1px;font-size:12.5px;font-variant-numeric:tabular-nums}
+.pp-sub{margin:18px 0 6px;font-size:12px;font-weight:700}
+
+/* Tanda tangan dan catatan kaki */
+.pp-sg{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));gap:16px;margin:26px 0 0;text-align:center;font-size:11.5px;break-inside:avoid;page-break-inside:avoid}
+.pp-sg i{display:block;height:58px}
+.pp-sg b{display:block;font-weight:700;text-decoration:underline;text-underline-offset:2px}
+.pp-sg small{display:block;font-size:10.5px;color:var(--pp-mu)}
+.pp-ft{margin:20px 0 0;padding-top:8px;border-top:1px solid var(--pp-ln);font-size:10px;line-height:1.5;color:var(--pp-mu);text-align:center}
+
+/* ---- Dialog dokumen dan bukti ---- */
+dialog.stp{width:min(940px,96vw);max-height:94dvh;padding:0;overflow:auto;background:var(--sf2)}
+dialog.stp .stp-b{padding:16px}
+dialog.stp .bk-wide{min-width:0}
+.stp-h{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:var(--sf2);border-bottom:1px solid var(--br)}
+.stp-h b{font-size:16px}
+.stp-h button{width:36px;height:36px;min-height:0;padding:0;border-radius:50%;line-height:1}
+dialog.stp .stp-a{position:sticky;bottom:0;z-index:3;margin:0;padding:12px 16px;background:var(--sf2);border-top:1px solid var(--br);flex-wrap:wrap}
+dialog.stp .stp-ctl{padding:14px 16px 0}
+dialog.stp .stp-ctl .bar{margin-bottom:12px}
+dialog.stp .pp{box-shadow:0 8px 30px -14px rgba(0,0,0,.55)}
+dialog.strc{width:min(440px,96vw)}
+
+/* ---- Bukti transaksi (struk) lebih rapi ---- */
+.bk-rcpt .kvs{border:1px dashed var(--bd2);border-width:1px 0}
+.bk-rcpt .kv{align-items:baseline}
+.bk-rcpt .kv .mu{flex:none}
+
+/* ================= PONSEL: halaman ================= */
+@media screen and (max-width:860px){
+  .stsum{grid-template-columns:1fr 1fr;background:var(--s2);border-radius:16px;box-shadow:none}
+  .stsum>div{padding:12px 14px;border-left:0;border-top:1px solid var(--ln)}
+  .stsum>div:nth-child(even){border-left:1px solid var(--ln)}
+  .stsum>div:nth-child(-n+2){border-top:0}
+  .stsum>div:last-child:nth-child(odd){grid-column:1/-1}
+  .stsum b{font-size:clamp(16px,5vw,20px)}
+  .bk-tabs{display:flex;width:100%}.bk-tabs button{flex:1 1 auto;padding:9px 12px}
+  .card.stcard{background:var(--s2)}
+  .stcard .stn{padding:12px 14px}
+  .lp-top{flex-direction:column;align-items:stretch}.lp-act button{flex:1 1 auto}
+  .pp-sheet{padding:8px;border-radius:14px}
+  .bar .stmon{flex:1 1 100%;justify-content:space-between}
+  .bar .stmon b{flex:1}
+
+  /* Tabel buku menjadi daftar transaksi: judul + nominal di baris pertama, tanggal dan saldo di baris kedua */
+  .stm:not(.mtx),.stm:not(.mtx) tbody{display:block;width:100%}
+  .stm:not(.mtx) thead{display:none}
+  .stm:not(.mtx) tr{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 12px;padding:13px 14px;border-bottom:1px solid var(--ln)}
+  .stm:not(.mtx) tbody tr:last-child{border-bottom:0}
+  .stm:not(.mtx) tr::after{content:'';order:3;flex:0 0 100%;height:0}
+  .stm:not(.mtx) td{display:block;padding:0;border:0;background:none!important;white-space:normal;text-align:left;font-size:13.5px;min-width:0}
+  .stm:not(.mtx) td:empty{display:none}
+  .stm:not(.mtx) td[data-k=ket],.stm:not(.mtx) td[data-k=rek]{order:1;flex:1 1 0;font-size:14.5px;font-weight:600}
+  .stm:not(.mtx) td[data-k=kre],.stm:not(.mtx) td[data-k=deb],.stm:not(.mtx) td[data-k=amt]{order:2;flex:0 0 auto;margin-left:auto;text-align:right;font-weight:800;font-size:14.5px}
+  .stm:not(.mtx) td[data-k=tgl],.stm:not(.mtx) td[data-k=per]{order:4;flex:1 1 50%;font-size:12.5px;color:var(--mu)}
+  .stm:not(.mtx) td.d b,.stm:not(.mtx) td.d span{display:inline;font-size:12.5px;font-weight:400}
+  .stm:not(.mtx) td.d span::before{content:' · '}
+  .stm:not(.mtx) td[data-k=sal]{order:5;flex:0 0 auto;margin-left:auto;text-align:right;font-size:12.5px;color:var(--mu)}
+  .stm:not(.mtx) td[data-k=sal]::before{content:'Saldo ';font-weight:400}
+  .stm:not(.mtx) td[data-k=ref]{order:6;flex:1 1 100%;font-size:12px}
+  .stm:not(.mtx) td[data-k=st]{order:7;flex:0 0 auto}
+  .stm:not(.mtx) td[data-k=act]{order:8;flex:1 1 auto;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+  .stm:not(.mtx) td[data-k=act]:empty{display:none}
+  .stm:not(.mtx) td:not([data-k=ket]):not([data-k=rek]):not([data-k=kre]):not([data-k=deb]):not([data-k=amt]):not([data-k=tgl]):not([data-k=per]):not([data-k=sal]):not([data-k=ref]):not([data-k=st]):not([data-k=act]){order:9;flex:1 1 40%;font-size:12.5px;color:var(--mu)}
+  .stm:not(.mtx) td[data-k=rek]~td[data-k=ket]{order:6;flex:1 1 100%;font-size:12.5px;font-weight:400;color:var(--mu)}
+  .stm:not(.mtx) td:not([data-k=ket]):not([data-k=rek]):not([data-k=kre]):not([data-k=deb]):not([data-k=amt]):not([data-k=tgl]):not([data-k=per]):not([data-k=sal]):not([data-k=ref]):not([data-k=st]):not([data-k=act]):not([data-label=''])::before{content:attr(data-label) ': '}
+  .stm:not(.mtx) td .lab{font-size:12px}
+  .stm:not(.mtx) tr.tot{display:none}
+  /* daftar yang tidak memakai nominal di kanan atas (mis. pengingat): label di depan nilai */
+  .stm.stm-l td[data-k=hp]::before{content:'Kontak wali: '}
+  .stm.stm-l td[data-k=kelas]::before{content:'Kelas '}
+
+  .mtx{min-width:620px}
+  .mtx td[data-k=nama]{min-width:132px}
+}
+
+/* ================= PONSEL: kertas di dalam dialog ================= */
+@media screen and (max-width:640px){
+  .pp{padding:18px 14px 16px;border-radius:10px;box-shadow:none}
+  .pp-h{gap:12px}.pp-lg .bt{width:44px!important;height:44px!important}
+  .pp-org b{font-size:14px}
+  .pp-t{margin:18px 0 14px}
+  .pp-m>div{grid-template-columns:104px 62px minmax(0,1fr);font-size:11.5px}
+  .pp-tw{margin:0}
+  .pp-tb,.pp-tb tbody,.pp-tb tfoot{display:block;width:100%}
+  .pp-tb thead{display:none}
+  .pp-tb tr{display:flex;flex-wrap:wrap;gap:4px 10px;padding:10px 2px;border-bottom:1px solid var(--pp-ln)}
+  .pp-tb tbody tr:nth-child(even) td{background:none}
+  .pp-tb td{display:block;padding:0;border:0;font-size:11.5px;min-width:0}
+  .pp-tb td[data-k=no]{display:none}
+  .pp-tb td[data-k=ket],.pp-tb td[data-k=nama]{order:1;flex:1 1 100%;font-size:12.5px;font-weight:400}
+  .pp-tb td[data-k=nama]{font-weight:700}
+  .pp-tb td[data-k=ket] b{font-weight:700}
+  .pp-tb td[data-k=tgl]{order:2;flex:1 1 100%;color:var(--pp-mu)}
+  .pp-tb td[data-k=val]{display:none}
+  .pp-tb td.d b,.pp-tb td.d span{display:inline}
+  .pp-tb td.d span::before{content:' · '}
+  .pp-tb td[data-k=ref],.pp-tb td[data-k=rek],.pp-tb td[data-k=kelas]{order:3;flex:1 1 100%;color:var(--pp-mu)}
+  .pp-tb td[data-k=ref]::before,.pp-tb td[data-k=rek]::before{content:attr(data-label) ': '}
+  .pp-tb td[data-k=kelas]::before{content:'Kelas '}
+  .pp-tb td.r{order:4;flex:1 1 84px;text-align:left;white-space:normal}
+  .pp-tb td.r::before{content:attr(data-label);display:block;font-size:10px;color:var(--pp-mu)}
+  .pp-tb td.r.z{display:none}
+  .pp-tb td.r b{font-weight:700}
+  .pp-tb tr.tot{display:flex;border:0;border-top:1.5px solid var(--pp-tx);border-bottom:1.5px solid var(--pp-tx);padding:10px 2px}
+  .pp-tb tr.tot td{order:4;background:none;border:0}
+  .pp-tb tr.tot td.l,.pp-tb tr.tot td[colspan]{order:1;flex:1 1 100%}
+  .pp-sum{grid-template-columns:1fr 1fr}
+  .pp-sum>div:nth-child(odd){border-left:0}
+  .pp-sum>div:nth-child(n+3){border-top:1px solid var(--pp-ln)}
+  .pp-sum>div:last-child:nth-child(odd){grid-column:1/-1}
+  .pp-sg{gap:8px;font-size:11px}.pp-sg i{height:46px}
+  dialog.stp{max-height:94dvh}
+  dialog.stp .stp-b{padding:10px}
+  dialog.stp .stp-ctl{padding:10px 10px 0}
+  .stp-h{padding:8px 14px 10px}
+  dialog.stp .stp-a{padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px));flex-wrap:nowrap}
+  dialog.stp .stp-a button{flex:1;padding-left:10px;padding-right:10px}
+}
+
+/* ================= CETAK ================= */
+@media print{
+  @page{size:A4 portrait;margin:14mm 12mm 17mm;@bottom-center{content:"Halaman " counter(page) " dari " counter(pages);font:8pt Arial,"Liberation Sans",sans-serif;color:#333}}
+  html,body{background:#fff!important}
+  /* Halaman: hanya lembar kertas yang tercetak */
+  body.pdp #app>*:not(.pp-sheet){display:none!important}
+  body.pdp .pp-sheet{padding:0;margin:0;border:0;background:none;overflow:visible}
+  body.pdp main{padding:0!important}
+  /* Dialog: tampil biasa di alur halaman, bukan lapisan atas */
+  body.pd dialog[open]{position:static!important;inset:auto!important;display:block!important;width:auto!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;overflow:visible!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#fff!important;color:#000!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;animation:none!important}
+  body.pd dialog[open]::before{display:none!important}
+  dialog::backdrop{display:none!important;background:none!important}
+  body.pd dialog.stp .stp-b{padding:0}
+  .stp-h,.stp-a,.stp-ctl,.bk-noprint,.pp-noprint{display:none!important}
+  .pp{max-width:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;font-size:10pt}
+  .pp *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pp-h{padding-bottom:8pt}
+  .pp-t{margin:16pt 0 14pt}
+  .pp-tw{overflow:visible;margin:0}
+  .pp-tb{font-size:8.5pt}.pp-tb td{font-size:8.5pt;padding:5pt 6pt}.pp-tb th{font-size:9.5pt;padding:8pt 6pt}
+  .pp-tb td.d span,.pp-tb td .sub{font-size:8pt}
+  .pp-sg i{height:50pt}
+  /* mengembalikan tata letak tabel di kertas, apa pun lebar layarnya */
+  .pp-tb{display:table!important;width:100%}.pp-tb thead{display:table-header-group!important}.pp-tb tbody{display:table-row-group!important}.pp-tb tfoot{display:table-footer-group!important}
+  .pp-tb tr{display:table-row!important;padding:0}.pp-tb td{display:table-cell!important}
+  .pp-tb td[data-k=no],.pp-tb td[data-k=val]{display:table-cell!important}
+  .pp-tb td.r.z{display:table-cell!important}
+  .pp-tb td::before{content:none!important}
+  .pp-tb td.d b,.pp-tb td.d span{display:block!important}.pp-tb td.d span::before{content:none!important}
+  .pp-tb td.r{text-align:right!important}
+  .pp-tb tr.tot td.l,.pp-tb tr.tot td[colspan]{flex:none}
+  .pp-sum{grid-template-columns:repeat(var(--n,4),minmax(0,1fr))!important}
+  .pp-sum>div{border-top:0!important}.pp-sum>div:nth-child(odd){border-left:1px solid var(--pp-ln)}.pp-sum>div:first-child{border-left:0}
+  /* Bukti transaksi */
+  body.pd dialog.strc .bk-rcpt{padding:0}
+}
+
+/* Kontrol periode di dalam dialog dan laporan */
+.pbar input,.pbar select{width:auto;min-width:170px}
+@media screen and (max-width:860px){.pbar input,.pbar select{flex:1 1 40%;min-width:0;width:100%}}
+body[data-v=tabungan] .bar input[type=search]{min-width:150px}
+.pp-tb td[data-k=ref]{white-space:nowrap}
+.pp-tb td[data-k=ref] .rf{word-break:normal;white-space:nowrap}
+@media screen and (max-width:640px){.pp-sheet{padding:0;border:0;background:none;overflow:visible}.pp-sheet .pp{padding:16px 12px}}
