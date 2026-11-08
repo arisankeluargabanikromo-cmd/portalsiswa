@@ -138,6 +138,7 @@
         throw new Error('Isi SUPABASE_URL dan SUPABASE_ANON_KEY di public/js/config.js (lokal) atau Environment Variables Vercel.');
       if (!sb) sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY,
         { auth: { persistSession: true, autoRefreshToken: true } });
+      Data.brandP = Data.brandPublik();   // paralel dengan pemeriksaan sesi: merek terbaru sudah siap saat layar masuk digambar
       const { data } = await sb.auth.getSession();
       await Data._profile(data.session);
     },

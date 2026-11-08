@@ -5,7 +5,7 @@
    Isi:
    1. Primitif   : ST.num, ST.dt, ST.t (tabel), ST.sum (pita ringkasan), ST.tabs, ST.doc (kertas), ST.show/open (dialog), ST.print
    2. Kertas     : ST.rekPaper (rekening koran siswa), ST.kasPaper (buku kas), ST.rekapPaper (rekap batch)
-   3. Laporan    : menu Laporan (Tabungan, Kas Kelas, Iuran) dengan pratinjau kertas, cetak, dan ekspor CSV
+   3. Laporan    : menu Laporan (Tabungan, Kas Kelas, Iuran) dan tab Laporan di menu Absensi dengan pratinjau kertas, cetak, dan ekspor CSV
    4. Pengingat  : tampilan menu Pengingat WhatsApp
    Aturan cetak: kertas A4 portrait, tabel header berulang tiap halaman, nomor halaman lewat @page (Chrome/Edge 131+; peramban lain tanpa nomor halaman). */
 (() => {
@@ -187,6 +187,48 @@
       note: 'Tunggakan = minggu yang sudah lewat dan belum lunas, dihitung sejak minggu pertama yang tercatat di sistem. Jumlah dalam rupiah. Tanda – berarti belum ada pembayaran.', sign: signKelas() });
   }
 
+  /* ---- Laporan absensi: rekap per siswa atau matriks harian untuk periode terpilih (bulan, atau semua periode) ---- */
+  let LM = 'rekap';
+  const ABS_N = { H: 'Hadir', S: 'Sakit', I: 'Izin', A: 'Alpa' };
+  const lapAbsPer = () => LM == 'harian' ? (RB || today().slice(0, 7)) : RB;
+  function lapAbsData() {
+    const per = lapAbsPer(), list = db.siswa.filter(s => !RK || s.kelas == RK).slice().sort((a, b) => String(a.kelas).localeCompare(String(b.kelas), 'id', { numeric: true }) || String(a.nama).localeCompare(String(b.nama), 'id'));
+    const ids = new Set(list.map(s => s.id)), rec = db.absensi.filter(a => ids.has(a.sid) && (!per || a.tgl.slice(0, 7) == per));
+    const days = [...new Set(rec.map(a => a.tgl))].sort(), by = new Map();
+    rec.forEach(a => { let m = by.get(a.sid); if (!m) by.set(a.sid, m = {}); m[a.tgl] = a.st });
+    const rows = list.map(s => { const m = by.get(s.id) || {}, c = { H: 0, S: 0, I: 0, A: 0 }; Object.values(m).forEach(k => { if (k in c) c[k]++ }); const n = c.H + c.S + c.I + c.A; return { s, m, c, n, pct: n ? Math.round(c.H / n * 100) : null } });
+    const from = per ? per + '-01' : (days[0] || today()), to = per ? mEnd(per) : (days[days.length - 1] || today());
+    return { per, list, rows, days, from, to };
+  }
+  function lapAbsPaper() {
+    const D = lapAbsData(), T = { H: 0, S: 0, I: 0, A: 0 };
+    D.rows.forEach(r => { for (const k in T) T[k] += r.c[k] });
+    const tn = T.H + T.S + T.I + T.A, tp = tn ? Math.round(T.H / tn * 100) : null;
+    const wali = db.cfg.walikelas || '', sign = db.cfg.kepsek ? [['Mengetahui, Kepala sekolah', db.cfg.kepsek, db.cfg.kepsek_nip || ''], ['Wali kelas', wali]] : [['Wali kelas', wali]];
+    let cols, rows, cls = '', note;
+    if (LM == 'harian') {
+      cls = 'pp-ab';
+      cols = [['No.', 'no', 'c'], ['Nama', 'nama', 'l'], ...D.days.map(d => [String(+d.slice(8)), 'd' + d.slice(8), 'c']), ['H', 'h', 'c'], ['S', 's', 'c'], ['I', 'i', 'c'], ['A', 'a', 'c']];
+      rows = D.rows.map((r, i) => [String(i + 1), { h: `<b>${esc(r.s.nama)}</b>`, c: 'l' }, ...D.days.map(d => { const k = r.m[d]; return { h: k || '·', c: k == 'A' ? 'ab-a' : k ? '' : 'z' } }), r.c.H, r.c.S, r.c.I, r.c.A]);
+      note = 'H = Hadir, S = Sakit, I = Izin, A = Alpa, titik (·) = belum dicatat. Hanya tanggal yang memiliki catatan absensi yang ditampilkan; angka pada kepala kolom adalah tanggal.';
+    } else {
+      cols = [['No.', 'no', 'c'], ['Nama', 'nama', 'l'], ['Kelas', 'kelas', 'c'], ['Hadir', 'h', 'r'], ['Sakit', 's', 'r'], ['Izin', 'i', 'r'], ['Alpa', 'a', 'r'], ['Jumlah Hari', 'jml', 'r'], ['% Hadir', 'pct', 'r']];
+      rows = D.rows.map((r, i) => [String(i + 1), { h: `<b>${esc(r.s.nama)}</b><span class='sub'>NIS ${esc(r.s.nis)}</span>`, c: 'l' }, esc(r.s.kelas), r.c.H, r.c.S, r.c.I, r.c.A, r.n, { h: r.pct == null ? '–' : r.pct + '%', c: r.pct == null ? 'z' : '' }]);
+      if (rows.length) rows.push({ cls: 'tot', c: [{ h: 'Jumlah', span: 3, c: 'l' }, T.H, T.S, T.I, T.A, tn, tp == null ? '–' : tp + '%'] });
+      note = 'Persentase hadir = jumlah hari hadir dibagi jumlah hari yang tercatat untuk siswa tersebut. Siswa tanpa catatan pada periode ini ditandai –.';
+    }
+    return doc({ title: 'Laporan Absensi', en: 'Attendance Report',
+      meta: [['Periode', 'Dari', dLong(D.from)], ['', 'Sampai', dLong(D.to)], ['Kelas', RK ? esc(RK) : 'Semua kelas'], ['Jumlah Siswa', String(D.list.length)], ['Hari Tercatat', String(D.days.length)], ['Tahun Ajaran', esc(db.cfg.tahun || '-')]],
+      body: t(cols, rows, { paper: true, cls, empty: 'Belum ada catatan absensi pada periode ini.' }),
+      sum: [['Hadir', String(T.H)], ['Sakit / Izin', T.S + ' / ' + T.I], ['Alpa', String(T.A)], ['Kehadiran', tp == null ? '-' : tp + '%']],
+      note, sign });
+  }
+  function csvAbs() {
+    const D = lapAbsData(), pt = D.per ? perTxt(D.per) : 'Semua periode';
+    if (LM == 'harian') return csv('absensi-harian', [['Nama', 'NIS', 'Kelas', ...D.days.map(dmy), 'Hadir', 'Sakit', 'Izin', 'Alpa'], ...D.rows.map(r => [r.s.nama, r.s.nis, r.s.kelas, ...D.days.map(d => r.m[d] || ''), r.c.H, r.c.S, r.c.I, r.c.A])]);
+    csv('rekap-absensi', [['Nama', 'NIS', 'Kelas', 'Periode', 'Hadir', 'Sakit', 'Izin', 'Alpa', 'Jumlah hari', '% Hadir'], ...D.rows.map(r => [r.s.nama, r.s.nis, r.s.kelas, pt, r.c.H, r.c.S, r.c.I, r.c.A, r.n, r.pct == null ? '' : r.pct])]);
+  }
+
   const lapPaper = () => LT == 'kas' ? kasPaper(RB) : LT == 'iuran' ? lapIuranPaper() : lapTabPaper();
   V.laporan = () => {
     const mo = LT == 'iuran' ? lapIurPer() : RB;
@@ -197,9 +239,21 @@
       + `<div class='pbar'><input type='month' value='${mo}' max='${today().slice(0, 7)}' onchange="RB=this.value;go()" aria-label='Periode laporan'>${LT == 'iuran' ? '' : `<button type='button' onclick="RB='';go()" ${RB ? '' : 'disabled'}>Semua periode</button>`}${kls}</div>`
       + `<div class='pp-sheet'>${lapPaper()}</div>`;
   };
+  /* Tab Laporan di dalam menu Absensi (app.js memanggil ST.lapAbsBody dan ST.absActs). */
+  const absActs = () => `<div class='lp-act'><button type='button' onclick='ST.csv()'>Ekspor CSV</button><button type='button' class='p' onclick='ST.print()'>Cetak / PDF</button></div>`;
+  const lapAbsBody = () => {
+    const mo = lapAbsPer(), harian = LM == 'harian';
+    const kls = `<select onchange=\"RK=this.value;go()\" aria-label='Kelas'><option value=''>Semua kelas</option>${kelasList().map(k => `<option ${k == RK ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select>`;
+    const bentuk = `<select onchange=\"ST.lm(this.value)\" aria-label='Bentuk laporan'><option value='rekap' ${harian ? '' : 'selected'}>Rekap per siswa</option><option value='harian' ${harian ? 'selected' : ''}>Matriks harian (per bulan)</option></select>`;
+    return `<div class='pbar'><input type='month' value='${mo}' max='${today().slice(0, 7)}' onchange=\"RB=this.value;go()\" aria-label='Periode laporan'>${harian ? '' : `<button type='button' onclick=\"RB='';go()\" ${RB ? '' : 'disabled'}>Semua periode</button>`}${kls}${bentuk}</div>`
+      + `<div class='pp-sheet'>${lapAbsPaper()}</div>`;
+  };
+
   function csvLap() {
+    if (cur == 'absensi') return csvAbs();
     if (LT == 'kas') return A.csvKas();
     if (LT == 'iuran') return A.csvIuran();
+    if (cur == 'absensi') return csvAbs();
     const u = U(), D = lapTabData();
     csv('rekap-tabungan', [['No. Rekening', 'Nama', 'NIS', 'Kelas', 'Periode', 'Saldo awal', 'Debit (tarik)', 'Kredit (setor)', 'Saldo akhir'], ...D.rows.map(r => [u.noRek(r.s), r.s.nama, r.s.nis, r.s.kelas, perTxt(D.per), r.bf, r.d, r.k, r.end])]);
   }
@@ -225,6 +279,6 @@
 
   /* ================= API ================= */
   window.ST = { num, num0, dmy, dLong, mEnd, jam, dt, t, sum, tabs, doc, show, open, rekPaper, kasPaper, rekapPaper, print: print_, csv: csvLap,
-    lt(x) { LT = x; go() }, pk(x) { PK = x; go() } };
+    lt(x) { LT = x; go() }, lm(x) { LM = x; go() }, av(x) { if (x == 'laporan' && AV != 'laporan') { RB = AT.slice(0, 7); RK = AK } AV = x; go() }, lapAbsBody, absActs, pk(x) { PK = x; go() } };
   A.csvLap = csvLap;
 })();

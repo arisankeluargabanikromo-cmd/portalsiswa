@@ -3,7 +3,7 @@
    $, esc, rp, fd, today, toast, logA, ico, sis, saldo, total, kelasList, csv, WA_TAB, WA_IUR. */
 (() => {
   'use strict';
-  const VER = '2.14.0';
+  const VER = '2.14.1';
   const adm = () => Data.role == 'admin';
   const NUMK = ['iuran', 'saldomin', 'limitotor'];   // kolom konfigurasi bertipe angka
   const ROLE = ROLEL;

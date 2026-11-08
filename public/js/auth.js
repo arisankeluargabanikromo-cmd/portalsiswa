@@ -55,17 +55,28 @@
   }
   function shell(inner, bc) {
     document.title = (bc.a || 'SekolahHub') + (bc.n ? ' – ' + bc.n : '');
+    const fv = document.querySelector('link[rel=icon]'); if (fv) fv.href = bc.u || 'icons/icon-192.png';
+    shown = JSON.stringify(bc);
     return `<div class='ash'>${brandPanel(bc)}<div class='afm'>${inner}</div></div><button type='button' class='thf' data-theme-cycle aria-label='Ganti tampilan'><span data-theme-icon></span></button>`;
   }
-  /* Perangkat baru belum punya salinan merek: ambil dari server (fungsi publik brand_publik, migrasi 014) lalu gambar ulang panel kiri saja. */
-  let fetched = false;
+  /* Brand.ready() (boot) biasanya sudah memuat merek terbaru sebelum layar digambar. Bila server lambat (lewat batas tunggu),
+     layar tampil dengan salinan perangkat lebih dulu, lalu bagian kop diganti dengan pemudaran halus setelah logo baru siap dimuat. */
+  let fetched = false, shown = '';   // shown = merek yang sedang tampil di layar
   function refreshBrand() {
-    if (fetched) return; fetched = true;
-    Data.brandPublik().then(b => {
+    if (fetched || !Data.brandP) return; fetched = true;
+    Data.brandP.then(async b => {
       if (!b || !(b.n || b.u || b.a)) return;
-      const o = JSON.stringify(Brand.cached()); Brand.put(b);
-      const nb = Brand.cached(), el = document.querySelector('#auth .abr');
-      if (el && JSON.stringify(nb) !== o) { el.outerHTML = brandPanel(nb); document.title = (nb.a || 'SekolahHub') + (nb.n ? ' – ' + nb.n : ''); }
+      Brand.put(b); Brand.fresh = true;
+      const nb = Brand.cached(); if (JSON.stringify(nb) === shown) return;
+      shown = JSON.stringify(nb);
+      if (nb.u) await Brand.load(nb.u);
+      const el = document.querySelector('#auth .abr'); if (!el) return;
+      const t = document.createElement('div'); t.innerHTML = brandPanel(nb);
+      const nk = t.querySelector('.abk'), ok = el.querySelector('.abk'), nn = t.querySelector('.abn'), on = el.querySelector('.abn');
+      if (nk && ok) { nk.classList.add('fin'); ok.replaceWith(nk); }
+      if (nn && on) on.textContent = nn.textContent;
+      document.title = (nb.a || 'SekolahHub') + (nb.n ? ' – ' + nb.n : '');
+      const fv = document.querySelector('link[rel=icon]'); if (fv) fv.href = nb.u || 'icons/icon-192.png';
     });
   }
 

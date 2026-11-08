@@ -60,6 +60,8 @@
     if (n < 1e9) return tb(Math.floor(n / 1e6)) + ' juta' + (n % 1e6 ? ' ' + tb(n % 1e6) : ''); if (n < 1e12) return tb(Math.floor(n / 1e9)) + ' miliar' + (n % 1e9 ? ' ' + tb(n % 1e9) : '');
     return tb(Math.floor(n / 1e12)) + ' triliun' + (n % 1e12 ? ' ' + tb(n % 1e12) : '') };
   const terb = n => n === 0 ? 'Nol rupiah' : cap(tb(Math.abs(n)) + ' rupiah');
+  const EYE = { on: `<svg viewBox='0 0 24 24' width='18' height='18' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z'/><circle cx='12' cy='12' r='3'/></svg>`,
+    off: `<svg viewBox='0 0 24 24' width='18' height='18' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M3 3l18 18'/><path d='M10.6 6.1A10.5 10.5 0 0112 6c6.4 0 10 6 10 6a17 17 0 01-3.2 3.9M6.6 7.6A17 17 0 002 12s3.6 7 10 7a10 10 0 004.2-.9'/><path d='M9.9 9.9a3 3 0 004.2 4.2'/></svg>` };
   let HIDE = false; try { HIDE = localStorage.getItem('sh.bk.hide') == '1' } catch (e) { /* abaikan */ }
 
   /* ---------- Posting ke buku besar (kolom ref, waktu, petugas dicap ulang oleh server) ---------- */
@@ -103,7 +105,7 @@
   const acctCard = s => {
     const a = db.tab.some(t => t.sid == s.id) ? ldDormant(s) : ['Baru', ''];
     return `<div class='bk-card'><small>TABUNGAN SISWA · ${esc(db.cfg.sekolah)}</small><div class='nm'>${esc(s.nama)}</div><div class='nr'>${noRek(s)}</div><div class='lab' style='color:inherit;opacity:.85'>NIS ${esc(s.nis)} · Kelas ${esc(s.kelas)}</div>`
-      + `<div class='sd'><span>${HIDE ? 'Rp •••••••' : rp(saldo(s.id))}</span><button type='button' class='eye bk-noprint' aria-label='Tampilkan atau sembunyikan saldo' onclick="BK.eye('${s.id}')">${HIDE ? '👁' : '🙈'}</button></div><span class='st'>${a[0]}</span></div>`;
+      + `<div class='sd'><span>${HIDE ? 'Rp •••••••' : rp(saldo(s.id))}</span><button type='button' class='eye bk-noprint' aria-label='${HIDE ? 'Tampilkan saldo' : 'Sembunyikan saldo'}' title='${HIDE ? 'Tampilkan saldo' : 'Sembunyikan saldo'}' onclick="BK.eye('${s.id}')">${EYE[HIDE ? 'off' : 'on']}</button></div><span class='st'>${a[0]}</span></div>`;
   };
   const ldDormant = s => { const l = db.tab.filter(t => t.sid == s.id).reduce((m, t) => t.tgl > m ? t.tgl : m, ''); return (Date.now() - new Date(l + 'T00:00')) / 864e5 > 90 && saldo(s.id) > 0 ? ['Dormant', 'vd'] : ['Aktif', 'in'] };
   const head = t => `<div style='display:flex;align-items:center;gap:8px;margin-bottom:6px'>${Brand.tile(26, 'inl')}<b>${esc(db.cfg.sekolah)}</b></div><h3 style='margin:0 0 4px'>${t}</h3>`;
