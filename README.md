@@ -272,6 +272,16 @@ Tampilan dua kolom di desktop: panel merek (logo dan nama sekolah dari cache per
 - Jalankan `supabase/migrations/014_nama_aplikasi.sql` sekali di SQL Editor. Migrasi menambah kolom `app_nama` dan fungsi `brand_publik()` yang hanya mengembalikan nama aplikasi, nama sekolah, logo, instansi, alamat, dan telepon (data non-sensitif) agar kop tampil juga di perangkat yang baru dipakai sebelum login. Tanpa migrasi, kop tetap tampil dari salinan perangkat setelah login pertama, dan nama aplikasi tetap "SekolahHub".
 - Kotak **Masuk** dan **Daftar** kini berukuran sama di desktop (tinggi tetap; isi menggulir di dalam kotak bila layar sangat pendek). Di ponsel, lebar dan posisi tab identik.
 
+### Absensi: pembatalan dan laporan cetak (v2.14.3)
+- Absensi yang salah input bisa dibatalkan: klik ulang pilihan aktif, tombol **Batal** per siswa, atau **Kosongkan hari ini** untuk satu kelas.
+- Menu **Kelas > Absensi** punya dua tab: **Catat harian** dan **Laporan**. Tab Laporan mencetak laporan kehadiran per periode (bulan atau semua periode) dan per kelas, dalam bentuk rekap per siswa atau matriks harian. Tersedia ekspor CSV (pilihan kelas dan bulan ikut terbawa saat berpindah tab).
+
+### Pembukaan tanpa kedipan (v2.14.1)
+
+- Aplikasi menampilkan layar pembuka (splash) seketika dari HTML. Perangkat yang sudah login melihat logo dan nama sekolah; perangkat yang belum login melihat indikator memuat netral, karena salinan merek di perangkat bisa sudah usang bila admin mengganti logo.
+- Data merek terbaru diminta ke server **bersamaan** dengan pemeriksaan sesi, lalu layar masuk digambar sekali dengan kop yang benar. Tidak ada lagi logo lama atau lambang bawaan yang berganti setelah beberapa detik.
+- Bila server lebih lambat dari 1,2 detik, layar tampil dengan salinan perangkat lalu kop diganti dengan pemudaran halus setelah logo baru selesai dimuat.
+
 ## Voting per akun (v2.14, migrasi 015)
 
 - **Siapa yang memilih:** akun **Siswa** yang sedang login, atas nama siswa yang tertaut ke akunnya. Admin dan pengurus tidak lagi memilihkan suara; mereka membuat pemilihan, memantau partisipasi, dan menutupnya. Siswa yang belum punya akun belum dapat memilih: buat dan tautkan akunnya di menu **Pengguna**.
