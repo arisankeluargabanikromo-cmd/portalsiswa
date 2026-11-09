@@ -3,7 +3,7 @@
    $, esc, rp, fd, today, toast, logA, ico, sis, saldo, total, kelasList, csv, WA_TAB, WA_IUR. */
 (() => {
   'use strict';
-  const VER = '2.14.1';
+  const VER = '2.17.0';
   const adm = () => Data.role == 'admin';
   const NUMK = ['iuran', 'saldomin', 'limitotor'];   // kolom konfigurasi bertipe angka
   const ROLE = ROLEL;
@@ -193,7 +193,7 @@
           const q = Math.min(1, 256 / Math.max(im.width, im.height)), w = Math.max(1, Math.round(im.width * q)), h = Math.max(1, Math.round(im.height * q)), c = document.createElement('canvas');
           c.width = w; c.height = h; c.getContext('2d').drawImage(im, 0, 0, w, h);
           c.toBlob(async b => {
-            try { const old = db.cfg.logo; db.cfg.logo = await Data.uploadLogo(b); Data.dropLogo(old); logA('Logo sekolah diperbarui'); save(); PG.paintLogo(); toast('Logo diperbarui') }
+            try { const old = db.cfg.logo; db.cfg.logo = await Data.uploadLogo(b); logA('Logo sekolah diperbarui'); await save(); if (!Data.lastError) Data.dropLogo(old); PG.paintLogo(); toast('Logo diperbarui') }
             catch (e) { toast('Gagal mengunggah logo: ' + e.message) }
           }, 'image/png');
         };
@@ -204,7 +204,7 @@
     },
     logoDel() {
       dlg(`<h3>Hapus logo?</h3><p>Logo diganti lambang bawaan aplikasi di semua tempat.</p><div class='acts'><button id='x'>Batal</button><button class='p dng' id='ok'>Hapus logo</button></div>`, d => {
-        d.querySelector('#ok').onclick = () => { Data.dropLogo(db.cfg.logo); db.cfg.logo = ''; logA('Logo sekolah dihapus'); save(); d.close(); PG.paintLogo(); toast('Logo dihapus') };
+        d.querySelector('#ok').onclick = async () => { const old = db.cfg.logo; db.cfg.logo = ''; logA('Logo sekolah dihapus'); d.close(); await save(); if (!Data.lastError) Data.dropLogo(old); PG.paintLogo(); toast('Logo dihapus') };
       });
     },
     /* Cadangan */
@@ -223,8 +223,8 @@
         if (!src || !Array.isArray(src.siswa) || !Array.isArray(src.tab)) return toast('Berkas bukan cadangan SekolahHub');
         danger({
           title: 'Pulihkan dari cadangan', kw: 'PULIHKAN', ok: 'Pulihkan data',
-          body: `<p>Seluruh data saat ini akan <b>diganti</b> dengan isi cadangan${j.dibuat ? ' (dibuat ' + esc(new Date(j.dibuat).toLocaleString('id-ID')) + ')' : ''}:</p><div class='kv'><span class='mu'>Siswa</span><b>${src.siswa.length}</b></div><div class='kv'><span class='mu'>Transaksi tabungan</span><b>${src.tab.length}</b></div><div class='kv'><span class='mu'>Iuran · Absensi · Kas</span><b>${(src.iuran || []).length} · ${(src.absensi || []).length} · ${(src.kas || []).length}</b></div><p class='lab'>Cadangan data saat ini otomatis diunduh lebih dulu.</p>`,
-          run: d => { A.unduh('sebelum-pemulihan'); const nd = fix(JSON.parse(JSON.stringify(src))); nd.cfg = Object.assign({}, db.cfg, nd.cfg, { logo: db.cfg.logo }); load(nd); logA('Data dipulihkan dari cadangan'); save(); d.close(); go(); toast('Data dipulihkan') }
+          body: `<p>Seluruh data saat ini akan <b>diganti</b> dengan isi cadangan${j.dibuat ? ' (dibuat ' + esc(new Date(j.dibuat).toLocaleString('id-ID')) + ')' : ''}:</p><div class='kv'><span class='mu'>Siswa</span><b>${src.siswa.length}</b></div><div class='kv'><span class='mu'>Transaksi tabungan</span><b>${src.tab.length}</b></div><div class='kv'><span class='mu'>Iuran · Absensi · Kas</span><b>${(src.iuran || []).length} · ${(src.absensi || []).length} · ${(src.kas || []).length}</b></div>${Data.bankOk !== false && db.cfg.tutup ? `<p class='lab'><b>Perhatian:</b> buku ditutup sampai ${esc(fd(db.cfg.tutup))}. Pemulihan tidak membuka kembali buku, dan server menolak transaksi bertanggal sampai tanggal itu. Buka kembali buku lebih dulu (Tabungan &gt; Penutupan harian) bila cadangan memuat transaksi pada periode tersebut.</p>` : ''}<p class='lab'>Cadangan data saat ini otomatis diunduh lebih dulu.</p>`,
+          run: d => { A.unduh('sebelum-pemulihan'); const nd = fix(JSON.parse(JSON.stringify(src))); nd.cfg = Object.assign({}, db.cfg, nd.cfg, { logo: db.cfg.logo, tutup: db.cfg.tutup }); load(nd); logA('Data dipulihkan dari cadangan'); save(); d.close(); go(); toast('Data dipulihkan') }
         });
       };
       i.click();
@@ -281,6 +281,9 @@
           + `<h4 class='sh4'>Naik kelas</h4>${ks.length ? ks.map(k => `<div class='nk'><span class='nkk'>${esc(k)}<small class='mu'>${n(k)} siswa</small></span><span class='mu'>→</span><input data-nk='${esc(k)}' value='${esc(nextK(k))}' aria-label='Kelas baru untuk ${esc(k)}'><label class='chk lul'><input type='checkbox' data-lul='${esc(k)}'>Lulus</label></div>`).join('') + `<p class='lab'>“Lulus” menghapus siswa kelas itu beserta seluruh datanya.</p>` : `<p class='lab'>Belum ada siswa.</p>`}`
           + `<h4 class='sh4'>Bersihkan data</h4>${CL.map(c => `<label class='chk'><input type='checkbox' data-cl='${c[0]}' ${c[1] ? 'checked' : ''}>${c[2]} <small class='mu'>(${cnt(c[0])})</small></label>`).join('')}`,
         run: d => {
+          const lulSet = new Set([...d.querySelectorAll('[data-lul]:checked')].map(e => e.dataset.lul));
+          const sisa = db.siswa.filter(s => lulSet.has(s.kelas) && saldo(s.id) > 0);
+          if (sisa.length && Data.bankOk !== false) throw new Error(sisa.length + ' siswa yang diluluskan masih memiliki saldo tabungan (mis. ' + sisa[0].nama + '). Tarik seluruh saldo lebih dulu lewat Tabungan > Mutasi > Tutup rekening, atau hapus centang Lulus.');
           A.unduh('sebelum-tahun-baru');
           const ta = $('#tb_ta').value.trim(), lul = new Set([...d.querySelectorAll('[data-lul]:checked')].map(e => e.dataset.lul)), ren = {};
           d.querySelectorAll('[data-nk]').forEach(e => { const v = e.value.trim(); if (v) ren[e.dataset.nk] = v });

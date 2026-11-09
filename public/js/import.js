@@ -7,6 +7,11 @@
   'use strict';
   const MAXB = 5 * 1048576, MAXR = 3000;
   const pad = n => String(n).padStart(2, '0');
+  /* Buku besar permanen (migrasi 013): server menolak tanggal masa depan, periode yang sudah ditutup, saldo minus, dan UPDATE baris. Periksa lebih dulu
+     di pratinjau agar satu baris bermasalah tidak menggagalkan satu paket (300 baris) saat disimpan. */
+  const bankOn = () => Data.bankOk !== false;
+  const lockErr = t => { if (!bankOn()) return ''; const tb = db.cfg.tutup || ''; return t > dstr(1) ? 'Tanggal transaksi di masa depan' : tb && t <= tb ? 'Periode sampai ' + fd(tb) + ' sudah ditutup (tutup buku)' : '' };
+  const markLock = out => out.forEach(o => { if (o.st == 'new' || o.st == 'update') { const e = lockErr(o.rec.tgl); if (e) { o.st = 'error'; o.msg = e } } });
   const norm = s => String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const MON = [['jan', 'januari', 'january'], ['feb', 'februari', 'pebruari', 'february'], ['mar', 'maret', 'march'], ['apr', 'april'], ['mei', 'may'], ['jun', 'juni', 'june'], ['jul', 'juli', 'july'], ['agu', 'agt', 'agustus', 'aug', 'august'], ['sep', 'sept', 'september'], ['okt', 'oktober', 'oct', 'october'], ['nov', 'november', 'nop', 'nopember'], ['des', 'desember', 'dec', 'december']];
   const MONI = {}; MON.forEach((a, i) => a.forEach(n => { MONI[n] = i + 1 }));
@@ -228,9 +233,10 @@
         return { items, warn: w };
       },
       classify(out, ctx) {
-        multiset(out, ctx, r => [r.sid, r.tgl, r.jenis, r.jml, norm(r.cat)].join('|'), db.tab);
+        multiset(out, ctx, r => [r.sid, r.tgl, r.jenis, r.jml, norm(r.cat)].join('|'), db.tab); markLock(out);
+        const mn = bankOn() ? +db.cfg.saldomin || 0 : 0;
         const ns = out.filter(o => o.st == 'new').sort((a, b) => a.rec.tgl.localeCompare(b.rec.tgl) || (a.rec.jenis == 'setor' ? -1 : 1) - (b.rec.jenis == 'setor' ? -1 : 1) || a.n - b.n), run = new Map();
-        ns.forEach(o => { const s = o.rec.sid; if (!run.has(s)) run.set(s, saldo(s)); const v = run.get(s) + (o.rec.jenis == 'setor' ? o.rec.jml : -o.rec.jml); if (v < 0) { o.st = 'error'; o.msg = 'Saldo tidak cukup (tersedia ' + rp(run.get(s)) + ')' } else run.set(s, v) });
+        ns.forEach(o => { const s = o.rec.sid; if (!run.has(s)) run.set(s, saldo(s)); const v = run.get(s) + (o.rec.jenis == 'setor' ? o.rec.jml : -o.rec.jml); if (o.rec.jenis == 'tarik' ? v < mn : v < 0) { o.st = 'error'; o.msg = (mn && v >= 0 ? 'Melanggar saldo mengendap minimal ' + rp(mn) : 'Saldo tidak cukup') + ' (tersedia ' + rp(run.get(s)) + ')' } else run.set(s, v) });
         out.order = ns.filter(o => o.st == 'new');
       },
       add(r) { db.tab.push({ id: uid(), ...r }) }
@@ -253,7 +259,7 @@
         const n = f.jml && T(f.jml) ? money(f.jml) : (+db.cfg.iuran || NaN); if (isNaN(n) || n <= 0) return { err: f.jml && T(f.jml) ? 'Jumlah \"' + T(f.jml) + '\" tidak valid' : 'Jumlah kosong dan iuran per minggu belum diatur di Pengaturan' };
         return { rec: { sid: rs.s.id, bulan: minggu.slice(0, 7), minggu, jml: n, tgl, cat }, warn: w, label: rs.s.nama + ' · ' + wkTitle(minggu) + ' · ' + rp(n) };
       },
-      classify(out, ctx) { keyed(out, ctx, r => r.sid + '|' + r.minggu, r => db.iuran.find(x => x.sid == r.sid && x.minggu == r.minggu), (old, r) => ['jml', 'tgl'].filter(k => String(old[k]) !== String(r[k])).map(k => k == 'jml' ? 'jumlah ' + rp(old.jml) + ' → ' + rp(r.jml) : 'tanggal bayar')) },
+      classify(out, ctx) { keyed(out, ctx, r => r.sid + '|' + r.minggu, r => paidWeek(r.sid, r.minggu) > 0 ? db.iuran.find(x => x.sid == r.sid && x.minggu == r.minggu && !x.rev_of) : undefined, (old, r) => ['jml', 'tgl'].filter(k => String(old[k]) !== String(r[k])).map(k => k == 'jml' ? 'jumlah ' + rp(old.jml) + ' → ' + rp(r.jml) : 'tanggal bayar')); markLock(out) },
       add(r) { db.iuran.push({ id: uid(), ...r }) },
       merge(old, r) { old.jml = r.jml; old.tgl = r.tgl; if (r.cat) old.cat = r.cat }
     },
@@ -294,7 +300,14 @@
         if (!items.length) return { skip: 1 };
         return { items, warn: w };
       },
-      classify(out, ctx) { multiset(out, ctx, r => [r.tgl, r.jenis, r.jml, norm(r.ket)].join('|'), db.kas) },
+      classify(out, ctx) {
+        multiset(out, ctx, r => [r.tgl, r.jenis, r.jml, norm(r.ket)].join('|'), db.kas); markLock(out);
+        if (!bankOn()) return;
+        const ns = out.filter(o => o.st == 'new').sort((a, b) => (a.rec.jenis == 'masuk' ? 0 : 1) - (b.rec.jenis == 'masuk' ? 0 : 1) || a.rec.tgl.localeCompare(b.rec.tgl) || a.n - b.n);
+        let run = kasSaldo();
+        ns.forEach(o => { const d = o.rec.jenis == 'masuk' ? o.rec.jml : -o.rec.jml; if (run + d < 0) { o.st = 'error'; o.msg = 'Saldo kas tidak cukup (tersedia ' + rp(run) + ')' } else run += d });
+        out.order = ns.filter(o => o.st == 'new');
+      },
       add(r) { db.kas.push({ id: uid(), ...r }) }
     },
     agenda: {
@@ -438,7 +451,8 @@
       + (S.mcols ? `<div class='nt ok'>Format matriks terdeteksi: ${S.mcols.length} kolom ${spec.matrix == 'bulan' ? 'bulan' : 'tanggal'} (${esc(S.mcols.slice(0, 4).map(m => m.name).join(', '))}${S.mcols.length > 4 ? ', …' : ''}). Setiap sel berisi data diimpor sebagai satu catatan.</div>` : '')
       + `<h4 class='sh4'>Petakan kolom</h4><div class='imm'>${fields.map(f => `<label>${esc(f.l)}${f.req ? " <span class='rq' title='Wajib'>*</span>" : ''}<select data-f='${f.k}'>${opts(S, S.map[f.k])}</select></label>`).join('')}</div>`
       + (spec.hint ? `<p class='lab'>${esc(spec.hint)}</p>` : '')
-      + (spec.dup ? `<div class='imr' role='radiogroup' aria-label='Jika data sudah ada'><b>Jika data sudah ada:</b><label class='chk'><input type='radio' name='imd' value='update' ${S.dup == 'update' ? 'checked' : ''}>Perbarui</label><label class='chk'><input type='radio' name='imd' value='skip' ${S.dup == 'skip' ? 'checked' : ''}>Lewati</label></div>` : '')
+      + (S.kind == 'iuran' && bankOn() ? `<p class='lab'>Pembayaran yang sudah tercatat tidak dapat diubah (buku besar permanen); baris itu dilewati. Koreksi lewat menu Iuran &gt; Batalkan.</p>` : '')
+      + (spec.dup && !(S.kind == 'iuran' && bankOn()) ? `<div class='imr' role='radiogroup' aria-label='Jika data sudah ada'><b>Jika data sudah ada:</b><label class='chk'><input type='radio' name='imd' value='update' ${S.dup == 'update' ? 'checked' : ''}>Perbarui</label><label class='chk'><input type='radio' name='imd' value='skip' ${S.dup == 'skip' ? 'checked' : ''}>Lewati</label></div>` : '')
       + `<div class='msg' id='imm' role='alert'>${idOk ? '' : 'Petakan minimal kolom NIS atau Nama siswa.'}</div>`
       + `<div class='acts'><button type='button' id='imb'>Ganti berkas</button><span class='sp'></span><button id='imx' type='button'>Batal</button><button type='button' class='p' id='imn'>Periksa data</button></div>`);
     const d = dlgEl(), msg = t => { d.querySelector('#imm').textContent = t };
@@ -475,15 +489,24 @@
     d.querySelector('#imo').onclick = commit;
   }
   function commit() {
-    const spec = SPEC[S.kind], res = S.res, before = JSON.stringify(db[spec.coll]);
+    const spec = SPEC[S.kind], res = S.res, coll = spec.coll, ids0 = new Set((db[coll] || []).map(x => x.id)), bk = [];
     let n = 0, u = 0;
     (res.order || res.filter(o => o.st == 'new')).forEach(o => { spec.add(o.rec); n++ });
-    res.filter(o => o.st == 'update').forEach(o => { spec.merge(o.old, o.rec); u++ });
+    res.filter(o => o.st == 'update').forEach(o => { bk.push([o.old, { ...o.old }]); spec.merge(o.old, o.rec); u++ });
+    const added = new Set(db[coll].filter(x => !ids0.has(x.id)).map(x => x.id));
     const sk = res.filter(o => o.st == 'skip' || o.st == 'error').length;
     logA('Impor ' + spec.title + ' dari Excel: ' + n + ' baru' + (u ? ', ' + u + ' diperbarui' : '') + (sk ? ', ' + sk + ' dilewati' : '')); save(); go();
-    const coll = spec.coll, kind = S.kind, title = spec.title;
-    show(`<h3>Impor selesai</h3><div class='ims'><span class='ibd new'>${n} ditambahkan</span>${u ? `<span class='ibd update'>${u} diperbarui</span>` : ''}${sk ? `<span class='ibd skip'>${sk} dilewati</span>` : ''}</div><p class='lab'>Data ${esc(title.toLowerCase())} sudah tersimpan. Salah impor? Anda bisa mengurungkannya sekarang.</p><div class='acts'><button type='button' id='imu'>Urungkan impor</button><span class='sp'></span><button type='button' class='p' id='imx'>Selesai</button></div>`);
-    dlgEl().querySelector('#imu').onclick = () => { db[coll] = JSON.parse(before); logA('Impor ' + title + ' diurungkan'); save(); go(); dlgEl().close(); toast('Impor diurungkan') };
+    const kind = S.kind, title = spec.title;
+    /* Buku besar permanen: hanya admin yang boleh menghapus baris tabungan, iuran, dan kas. Pengurus mengoreksi lewat Pembatalan. */
+    const canUndo = !(bankOn() && ['tab', 'iuran', 'kas'].includes(coll) && Data.role != 'admin');
+    show(`<h3>Impor selesai</h3><div class='ims'><span class='ibd new'>${n} ditambahkan</span>${u ? `<span class='ibd update'>${u} diperbarui</span>` : ''}${sk ? `<span class='ibd skip'>${sk} dilewati</span>` : ''}</div><p class='lab'>Data ${esc(title.toLowerCase())} sudah tersimpan. ${canUndo ? 'Salah impor? Anda bisa mengurungkannya sekarang.' : 'Transaksi bersifat permanen; bila ada yang keliru, koreksi lewat Pembatalan.'}</p><div class='acts'>${canUndo ? `<button type='button' id='imu'>Urungkan impor</button>` : ''}<span class='sp'></span><button type='button' class='p' id='imx'>Selesai</button></div>`);
+    const ub = dlgEl().querySelector('#imu');
+    if (ub) ub.onclick = () => {
+      /* Hanya baris hasil impor ini yang dibatalkan; data yang dicatat orang lain sesudahnya tidak ikut terhapus. */
+      db[coll] = db[coll].filter(x => !added.has(x.id));
+      bk.forEach(([o, c]) => { Object.keys(o).forEach(k => { if (!(k in c)) delete o[k] }); Object.assign(o, c) });
+      logA('Impor ' + title + ' diurungkan'); save(); go(); dlgEl().close(); toast('Impor diurungkan');
+    };
   }
 
   /* =============== Template Excel (.xlsx) =============== */
@@ -547,7 +570,7 @@
     open(kind) {
       if (!SPEC[kind]) return; if (!Data.canWrite()) return toast('Anda tidak punya izin untuk mengimpor data');
       if (typeof fflate == 'undefined') return toast('Pustaka impor belum termuat. Muat ulang halaman.');
-      S = { kind, dup: 'update', year: (typeof IY != 'undefined' && IY) || new Date().getFullYear() }; stepPick();
+      S = { kind, dup: kind == 'iuran' && bankOn() ? 'skip' : 'update', year: (typeof IY != 'undefined' && IY) || new Date().getFullYear() }; stepPick();
     },
     tpl(kind) { download(SPEC[kind].tplName + '.xlsx', makeXlsx(tplSheets(kind))) },
     _t: { readXlsx, parseCsv, parseDateStr, numOf, monthOf, makeXlsx, SPEC }

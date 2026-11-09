@@ -107,11 +107,14 @@ ${g('Orang tua', f('Ayah', s.ayah) + f('Ibu', s.ibu) + f('Pekerjaan', s.pkj))}${
       + `<div class='card stcard'>${ST.t([['Tanggal &amp; Waktu', 'tgl'], ['No. Referensi', 'ref'], ['Uraian', 'ket'], ['Kredit', 'kre', 'r'], ['Debit', 'deb', 'r'], ['Saldo', 'sal', 'r']], rows, { empty: 'Belum ada transaksi tabungan.' })}</div>`;
   }
 
+  /* Baris kas turunan iuran memuat nama siswa pembayar. Akun Siswa tidak boleh melihat status iuran siswa lain (lihat migrasi 011),
+     jadi nama disamarkan di tampilan ini. Catatan: ini perlindungan tampilan; kolom ket tetap terbaca lewat API oleh akun Siswa (lihat laporan audit). */
+  const ketKas = k => { const t = String(k.ket || ''); return String(k.id).startsWith('iu_') ? t.replace(/^((?:Pembatalan )?[Ii]uran mingguan) · .* · (Mg .*)$/, '$1 · $2') : t };
   function kas() {
     const u = BK.u, L = u.kasL(), rs = u.revs(db.kas), i = sum(db.kas, k => Math.max(0, u.efK(k))), o = sum(db.kas, k => Math.max(0, -u.efK(k)));
     const ks = [-5, -4, -3, -2, -1, 0].map(mk), f = (m, j) => sum(db.kas.filter(k => k.jenis == j && k.tgl.slice(0, 7) == m), k => k.jml);
     const rows = L.slice().reverse().map(x => { const k = x.k, e = u.efK(k), st = u.stat(k, rs);
-      return { cls: st == 'Dibatalkan' ? 'void' : '', c: [{ h: ST.dt(k.tgl, k.waktu), c: 'd' }, k.ref ? u.rf(k.ref) : '', `<b class='nm'>${esc(k.ket)}</b>${k.kat ? `<span class='lab'>${esc(k.kat)}</span>` : ''}${tag(st)}`,
+      return { cls: st == 'Dibatalkan' ? 'void' : '', c: [{ h: ST.dt(k.tgl, k.waktu), c: 'd' }, k.ref ? u.rf(k.ref) : '', `<b class='nm'>${esc(ketKas(k))}</b>${k.kat ? `<span class='lab'>${esc(k.kat)}</span>` : ''}${tag(st)}`,
         e > 0 ? `<span class='in'>+${rp(e)}</span>` : '', e < 0 ? `<span class='out'>−${rp(-e)}</span>` : '', rp(x.bal)] } });
     return head('Kas Kelas', 'Pemasukan dan pengeluaran kas kelas, terpisah dari tabungan. Hanya untuk dilihat.')
       + ST.sum([{ l: 'Saldo kas', v: rp(i - o), c: 'hero' }, { l: 'Pemasukan', v: rp(i), c: 'in' }, { l: 'Pengeluaran', v: rp(o), c: 'out' }])

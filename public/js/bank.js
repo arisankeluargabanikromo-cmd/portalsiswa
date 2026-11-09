@@ -69,7 +69,7 @@
   const postKas = o => { const k = { id: uid(), tgl: o.tgl, jenis: o.jenis, jml: o.jml, ket: o.ket, kat: o.kat || '', ref: mkRef(o.rev_of ? 'REV' : 'KAS', o.tgl), kanal: o.kanal || '', waktu: nowIso(), petugas: petus(), rev_of: o.rev_of || '' }; db.kas.push(k); return k };
   const postIur = o => { const i = { id: uid(), sid: o.sid, bulan: o.bulan, minggu: o.minggu, jml: o.jml, tgl: o.tgl, cat: o.cat || '', ref: mkRef(o.rev_of ? 'REV' : 'IUR', o.tgl), kanal: o.kanal || '', waktu: nowIso(), petugas: petus(), rev_of: o.rev_of || '' }; db.iuran.push(i); return i };
   /* "Berhasil" hanya bila server menerima. Bila ditolak, onError (app.js) memuat ulang data dari server sehingga tidak ada transaksi semu. */
-  async function commit() { syncKas(); await Data.push(db); return Data.lastError ? errMsg(Data.lastError) : '' }
+  async function commit() { syncKas(); await Data.push(db); if (Data.lastError) { try { await Data.rb } catch (e) { /* abaikan */ } return errMsg(Data.lastError) } return '' }
 
   /* ---------- Mesin alur: input -> konfirmasi -> otorisasi -> pembukuan -> bukti ----------
      o = { title, html(prev), wire(d), read(d) -> {err}|nilai, confirm(v) -> {rows, auth}, exec(v) -> hasil, done(hasil), next } */
@@ -326,7 +326,7 @@
   act('csvKas', () => { const rs = revs(db.kas); csv('buku-kas', [['Tanggal', 'Waktu', 'No. bukti', 'Jenis', 'Kategori', 'Uraian', 'Masuk', 'Keluar', 'Saldo', 'Status', 'Membatalkan', 'Petugas'],
     ...kasL().map(x => { const k = x.k, e = efK(k), o = k.rev_of ? (db.kas.find(r => r.id == k.rev_of) || {}).ref : ''; return [k.tgl, jam(k.waktu), k.ref, k.jenis == 'masuk' ? 'Masuk' : 'Keluar', k.kat, k.ket, e > 0 ? e : '', e < 0 ? -e : '', x.bal, stat(k, rs), o || '', k.petugas] })]) });
   act('csvTrx', () => { const rs = revs(db.tab); csv('mutasi-tabungan', [['Tanggal', 'Waktu', 'No. referensi', 'No. rekening', 'Nama', 'NIS', 'Kelas', 'Jenis', 'Kredit', 'Debit', 'Saldo', 'Keterangan', 'Status', 'Membatalkan', 'Petugas'],
-    ...db.tab.slice().sort(cmp).map(t => { const s = sis(t.sid), e = efT(t), o = t.rev_of ? (db.tab.find(r => r.id == t.rev_of) || {}).ref : '', b = (ledger(t.sid).find(x => x.t.id == t.id) || {}).bal; return [t.tgl, jam(t.waktu), t.ref, noRek(s), s.nama, s.nis, s.kelas, cap(tabLbl(t)), e > 0 ? e : '', e < 0 ? -e : '', b, t.cat, stat(t, rs), o || '', t.petugas] })]) });
+    ...(() => { const run = new Map(), byId = new Map(db.tab.map(r => [r.id, r])); return db.tab.slice().sort(cmp).map(t => { const s = sis(t.sid), e = efT(t), o = t.rev_of ? (byId.get(t.rev_of) || {}).ref : '', b = (run.get(t.sid) || 0) + e; run.set(t.sid, b); return [t.tgl, jam(t.waktu), t.ref, noRek(s), s.nama, s.nis, s.kelas, cap(tabLbl(t)), e > 0 ? e : '', e < 0 ? -e : '', b, t.cat, stat(t, rs), o || '', t.petugas] }) })()]) });
 
   /* ================= IURAN ================= */
   view('iuran', () => {

@@ -35,6 +35,10 @@
   let snapCfg = '';
   let chain = Promise.resolve(), busy = 0, lastPush = 0;
 
+  /* v2.16 (privasi): baris kas turunan iuran ('iu_*') tidak lagi membawa nama siswa ke server. Kolom ket kas terbaca oleh akun Siswa
+     (RLS kas_siswa), jadi nama hanya dipasang di memori staf (app.js enrichKas) dan dibuang di sini sebelum dikirim / dibandingkan. */
+  const KET_NAMA = /^((?:Pembatalan )?[Ii]uran mingguan) · .* · (Mg .*)$/;
+  const stripKet = t => String(t || '').replace(KET_NAMA, '$1 · $2');
   function toRow(k, it) {
     const m = MAP[k], r = { id: it.id };
     for (const c of m.cols) {
@@ -47,6 +51,7 @@
       if (c === 'jml' || c === 't' || c === 'target') v = Number(v) || 0;
       r[c] = v;
     }
+    if (k === 'kas' && String(it.id).startsWith('iu_')) r.ket = stripKet(r.ket);
     return r;
   }
   function fromRow(k, r) {
@@ -67,29 +72,42 @@
 
   // Hitung perubahan sekarang juga (sinkron), kirim ke server lewat antrian
   function plan(db) {
-    const up = {}, del = {}, alive = new Set((db.siswa || []).map(x => x.id));
+    const up = {}, del = {}, alive = new Set((db.siswa || []).map(x => x.id)), undo = [];
     for (const k of ORDER) {
       const m = MAP[k], prev = snap[k] || new Map(), cur = new Map();
       for (const it of db[k] || []) {
         if (!it.id) it.id = k === 'log' ? 'l' + it.t + uid().slice(0, 3) : uid();
         const r = toRow(k, it), j = JSON.stringify(r);
         cur.set(it.id, j);
-        if (prev.get(it.id) !== j) (up[k] = up[k] || []).push(r);
+        if (prev.get(it.id) !== j) { (up[k] = up[k] || []).push(r); undo.push([k, it.id, prev.get(it.id)]) }
       }
       if (!m.keep) for (const id of prev.keys()) if (!cur.has(id)) {
         // Buku besar tidak boleh dihapus baris demi baris oleh pengurus. Bila siswanya yang dihapus, server membersihkan turunannya (cascade).
         if (LEDGER.has(k) && !alive.has(JSON.parse(prev.get(id)).sid)) continue;
-        (del[k] = del[k] || []).push(id);
+        (del[k] = del[k] || []).push(id); undo.push([k, id, prev.get(id)]);
       }
       snap[k] = m.keep ? new Map([...prev, ...cur]) : cur; // jejak aktivitas tidak pernah dihapus dari server
     }
     const c = JSON.stringify(cfgRow(db.cfg || {}));
-    if (c !== snapCfg) { up.cfg = JSON.parse(c); snapCfg = c; }
-    return { up, del };
+    let oldCfg = null;
+    if (c !== snapCfg) { up.cfg = JSON.parse(c); oldCfg = snapCfg; snapCfg = c; }
+    /* Snapshot diperbarui lebih dulu (agar push berikutnya hanya mengirim selisih). Bila server menolak, rollback() mengembalikan
+       snapshot baris yang gagal sehingga perubahan itu dikirim ulang pada penyimpanan berikutnya, bukan hilang diam-diam. */
+    const rollback = () => {
+      for (const [k, id, old] of undo) { const m = snap[k]; if (!m) continue; if (old === undefined) m.delete(id); else m.set(id, old) }
+      if (oldCfg !== null) snapCfg = oldCfg;
+    };
+    return { up, del, rollback };
   }
   const chunk = (a, n) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
+  /* Urutan sisip buku besar: kredit asli, debit asli, pembatalan debit, pembatalan kredit. Trigger server memeriksa saldo saat tiap baris
+     masuk, sehingga urutan acak (mis. saat pemulihan cadangan, id acak pada tanggal yang sama) bisa menolak penarikan yang sebenarnya sah
+     atau pembatalan sebelum transaksi asalnya ada. Sort stabil: urutan lain dipertahankan. */
+  const debit = r => r.jenis === 'tarik' || r.jenis === 'keluar';
+  const lrank = r => r.rev_of ? (debit(r) ? 2 : 3) : (debit(r) ? 1 : 0);
+  const ordered = (k, rows) => LEDGER.has(k) || k === 'kas' ? rows.slice().sort((a, b) => lrank(a) - lrank(b)) : rows;
   async function run({ up, del }) {
-    for (const k of ORDER) for (const part of chunk(up[k] || [], 300)) {
+    for (const k of ORDER) for (const part of chunk(ordered(k, up[k] || []), 300)) {
       const { error } = await sb.from(MAP[k].table).upsert(part);
       if (error) throw error;
     }
@@ -129,7 +147,7 @@
   }
 
   const Data = {
-    user: null, role: 'pending', onError: null, onStatus: null, status: 'ok', lastError: null,
+    user: null, role: 'pending', onError: null, rb: null, onStatus: null, status: 'ok', lastError: null,
     _st(s) { Data.status = s; if (Data.onStatus) Data.onStatus(s); },
     canWrite: () => ['admin', 'pengurus'].includes(Data.role),
 
@@ -246,12 +264,13 @@
       if (tables.has('siswa')) await signPhotos(db);
     },
     push(db) {
+      Data.ver = (Data.ver || 0) + 1;   // v2.15: membatalkan cache saldo di app.js
       const p = plan(db);
       const until = Date.now() + 4000; // abaikan gema realtime dari tulisan sendiri
       Object.keys(p.up).concat(Object.keys(p.del)).forEach(k => own.set(k === 'cfg' ? 'pengaturan' : MAP[k].table, until));
       busy++; Data._st('saving'); Data.lastError = null;
       chain = chain.then(() => run(p)).then(() => Data._st(busy > 1 ? 'saving' : 'ok'))
-        .catch(e => { Data.lastError = e; Data._st('error'); if (Data.onError) Data.onError(e); })
+        .catch(e => { p.rollback(); Data.ver = (Data.ver || 0) + 1; Data.lastError = e; Data._st('error'); if (Data.onError) Data.rb = Promise.resolve(Data.onError(e)).catch(() => {}) })
         .then(() => { busy--; lastPush = Date.now(); });
       return chain;
     },
