@@ -1,5 +1,11 @@
 # SekolahHub
 
+> **v2.17.0**: **Scan QR kartu ID** untuk absen hadir dan setor cepat (tombol *Scan QR* di Absensi, atau menu *+ Tambah*). Butuh HTTPS dan izin kamera. Lihat `CHANGELOG_2.17.0.md`.
+>
+> **v2.16.0**: nama siswa tidak lagi tersimpan di uraian kas turunan iuran (jalankan `supabase/migrations/017_privasi_kas_iuran.sql`, lalu `supabase/tests/privasi_check.sql`). Tanpa migrasi, aplikasi tetap berjalan.
+>
+> **v2.15.0**: lapisan profesional (kunci otomatis, banner offline, pemberitahuan versi baru, pintasan papan ketik, aksesibilitas) dan saldo berindeks. Lihat `CHANGELOG_2.15.0.md` dan `ROADMAP_IDE.md`.
+
 Aplikasi grup sekolah dan tabungan siswa. Frontend statis (HTML, CSS, JS), database dan login di **Supabase**, kode di **GitHub**, hosting di **Vercel**.
 
 ## Struktur folder
