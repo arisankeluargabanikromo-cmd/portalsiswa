@@ -1,0 +1,37 @@
+/* SekolahHub v2.15: lapisan profesional. Hanya memakai token tema yang sudah ada (--pr, --bg, --tx, --br, --sf2). */
+
+/* Angka keuangan sejajar rapi */
+td.r, th.r, .big, .sdl, .in, .out, .st-n, .num { font-variant-numeric: tabular-nums; }
+
+/* Fokus papan ketik yang jelas, tanpa mengganggu pengguna mouse */
+:focus-visible { outline: 2px solid var(--pr); outline-offset: 2px; border-radius: 6px; }
+:focus:not(:focus-visible) { outline: none; }
+#app:focus { outline: none; }
+
+/* Tautan lewati */
+.skip { position: fixed; left: 12px; top: -60px; z-index: 300; padding: 10px 16px; border-radius: 10px; background: var(--pr); color: var(--pt); font-weight: 700; text-decoration: none; transition: top .15s; }
+.skip:focus { top: calc(10px + env(safe-area-inset-top, 0px)); }
+
+/* Banner status (offline / versi baru) */
+.pro-bar { position: fixed; left: 50%; transform: translateX(-50%); top: calc(8px + env(safe-area-inset-top, 0px)); z-index: 250; max-width: min(560px, calc(100vw - 24px)); padding: 9px 16px; border-radius: 12px; font-size: 13px; font-weight: 600; display: flex; gap: 12px; align-items: center; box-shadow: 0 8px 24px rgba(0,0,0,.28); }
+.pro-bar[hidden] { display: none; }
+.pro-off { background: #7a4b00; color: #fff2d6; }
+.pro-upd { background: var(--sf2); color: var(--tx); border: 1px solid var(--br); top: auto; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+.pro-upd button { padding: 6px 12px; }
+
+/* Panel kunci tidak aktif & bantuan pintasan */
+.pro-idle { position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(4, 10, 12, .62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.pro-card { width: min(420px, 100%); padding: 22px; border-radius: 18px; background: var(--sf2); color: var(--tx); border: 1px solid var(--br); box-shadow: 0 24px 60px rgba(0,0,0,.4); }
+.pro-card h3 { margin: 0 0 8px; font-size: 18px; }
+.pro-card p { margin: 0 0 16px; color: var(--mu); line-height: 1.5; }
+.pro-card .acts { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.pro-keys { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px; }
+.pro-keys td { padding: 7px 4px; border-bottom: 1px solid var(--br); }
+.pro-keys td:first-child { white-space: nowrap; color: var(--mu); }
+.pro-keys kbd { display: inline-block; min-width: 22px; padding: 1px 6px; text-align: center; font: 600 12px/1.6 ui-monospace, monospace; border: 1px solid var(--br); border-bottom-width: 2px; border-radius: 6px; color: var(--tx); background: var(--s3); }
+
+/* Sentuhan akhir */
+::selection { background: color-mix(in srgb, var(--pr) 35%, transparent); }
+button:not(:disabled):active { transform: translateY(1px); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+@media print { .skip, .pro-bar, .pro-idle { display: none !important; } }

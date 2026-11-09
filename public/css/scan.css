@@ -1,0 +1,22 @@
+/* SekolahHub v2.17: jendela pemindai QR. Memakai token tema yang ada. */
+.qs{position:fixed;inset:0;z-index:350;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(4,10,12,.7);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.qs-card{width:min(460px,100%);max-height:100%;overflow:auto;padding:16px;border-radius:18px;background:var(--sf2);color:var(--tx);border:1px solid var(--br);box-shadow:0 24px 60px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:10px}
+.qs-h{display:flex;align-items:center;justify-content:space-between;font-size:17px}
+.qs-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;border-radius:12px;background:var(--s3)}
+.qs-tabs button{padding:9px;border:0;border-radius:9px;background:transparent;color:var(--mu);font-weight:700}
+.qs-tabs button.on{background:var(--pr);color:var(--pt)}
+.qs-v{position:relative;aspect-ratio:4/3;border-radius:14px;overflow:hidden;background:#000}
+.qs-v video{width:100%;height:100%;object-fit:cover;display:block}
+.qs-fr{position:absolute;inset:18% 18%;border:3px solid color-mix(in srgb,var(--pr) 85%,#fff);border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.28);pointer-events:none}
+.qs-msg{min-height:22px;padding:8px 12px;border-radius:10px;font-size:14px;font-weight:600;background:var(--s3);color:var(--tx)}
+.qs-msg.ok{background:color-mix(in srgb,var(--ok,#2bb673) 25%,transparent)}
+.qs-msg.wr{background:color-mix(in srgb,var(--ac,#f0a73a) 25%,transparent)}
+.qs-msg.er{background:color-mix(in srgb,var(--er,#e5484d) 25%,transparent)}
+.qs-man{display:flex;gap:8px}.qs-man input{flex:1;min-width:0}
+.qs-sum{font-size:12.5px;color:var(--mu)}
+.qs-log{display:flex;flex-direction:column;gap:6px;max-height:190px;overflow:auto}
+.qs-it{padding:8px 10px;border-radius:10px;font-size:13.5px;background:var(--s3);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.qs-it.ok{border-left:3px solid var(--ok,#2bb673)}.qs-it.wr{border-left:3px solid var(--ac,#f0a73a)}.qs-it.er{border-left:3px solid var(--er,#e5484d)}
+.qs-it small{color:var(--mu)}
+@media(max-width:600px){.qs{padding:0;align-items:stretch}.qs-card{width:100%;border-radius:0;padding:calc(12px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px))}}
+@media print{.qs{display:none!important}}
