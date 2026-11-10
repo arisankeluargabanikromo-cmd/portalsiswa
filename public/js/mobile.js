@@ -132,9 +132,9 @@
   }
   function homeHTML() {
     const dash = cur == 'dashboard', w = Data.canWrite(), p = pins(), all = svAll();
-    const sw = Data.role == 'siswa' && window.SWV && db.siswa.length;   // akun Siswa: kartu pelajar (lanskap, depan) di bagian paling atas
+    const sw = ortu() && window.SWV && db.siswa.length;   // akun portal (Siswa, Orang tua): kartu pelajar (lanskap, depan) di bagian paling atas
     let h = `<section id='hm'><div class='hg ${dash || sw ? '' : 's'}'><button type='button' class='srch' data-search>${S(IC.search)}<span>Cari siswa, layanan, atau aksi</span></button></div>`;
-    if (sw) h += `<div class='swm-h'>${SWV.hero()}</div>`;
+    if (sw) h += `<div class='swm-h'>${SWV.sel()}${SWV.hero()}</div>`;
     if (dash) {
       let d = 0; try { d = total() - net(mk(-1)) } catch (e) {}
       const hid = hide(), acts = w

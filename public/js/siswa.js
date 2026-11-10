@@ -1,4 +1,6 @@
-/* SekolahHub: tampilan khusus akun Siswa (peran 'siswa', hanya-baca).
+/* SekolahHub: tampilan akun portal (peran 'siswa' dan 'ortu', hanya-baca). Sejak v2.22 Orang tua memakai tampilan yang SAMA dengan Siswa.
+   Perbedaan hanya dua: (1) akun Orang tua dapat memiliki beberapa anak, jadi ada pemilih anak (muncul hanya bila anak > 1) dan semua halaman
+   menampilkan anak yang dipilih; (2) voting: hanya akun Siswa yang memberi suara, Orang tua hanya melihat jalannya pemilihan.
    Dimuat setelah app.js dan idcard.js. Memakai global dari app.js: db, Data, V, NAV, SWIDS, CH, BL, BLF, $, esc, rp, fd, today, tbl, empty, ico, av, saldo, trendSvg, pn, mk, mlab, go, A, IDC.
    Isi file ini:
      1. Kartu pelajar (lanskap, halaman depan) untuk bagian paling atas Beranda, desktop dan mobile
@@ -6,17 +8,28 @@
      3. Keuangan  : Tabungan, Kas Kelas, Iuran, Pengingat
      4. Kelas     : Data Siswa, Struktur Kelas, Absensi, Agenda, Pengumuman, Voting
    Semua data yang tampil sudah dibatasi di database (RLS): siswa hanya menerima data dirinya sendiri; kas dan struktur bersifat umum
-   (migrasi 011); voting hanya lewat rekap voting_siswa() dan beri_suara() (migrasi 015, suara rahasia). Tidak ada tombol tulis di sini. app.js memilih tampilan ini lewat vw() hanya bila Data.role == 'siswa'. */
+   (migrasi 011); voting hanya lewat rekap voting_siswa() dan beri_suara() (migrasi 015, suara rahasia). Tidak ada tombol tulis di sini. app.js memilih tampilan ini lewat vw() bila portal() (peran siswa atau ortu). */
 (() => {
   'use strict';
 
-  const ME = () => db.siswa[0] || null;                                   // RLS: satu-satunya siswa yang tertaut
+  /* RLS: db.siswa hanya berisi siswa yang tertaut. Siswa: tepat satu. Orang tua: satu atau lebih; yang dipilih disimpan per akun di perangkat. */
+  const kidKey = () => 'sh.kid.' + ((Data.user && Data.user.id) || '');
+  let KID = null;   // dibaca saat pertama dipakai (Data.user belum ada ketika berkas ini dimuat); null = belum dibaca
+  const kid = () => { if (KID === null && Data.user) { try { KID = localStorage.getItem(kidKey()) || '' } catch (e) { KID = '' } } return KID || '' };
+  const ME = () => db.siswa.find(s => s.id == kid()) || db.siswa[0] || null;
+  const own = () => Data.role == 'siswa';                                 // hanya akun Siswa yang memberi suara
+  /* Pemilih anak (hanya Orang tua dengan lebih dari satu anak). Memakai gaya segmen yang sudah ada. */
+  function sel() {
+    if (Data.role != 'ortu' || db.siswa.length < 2) return '';
+    const me = ME();
+    return `<div class='swk-sel' role='group' aria-label='Pilih anak'>${db.siswa.map(s => `<button type='button' class='${me && s.id == me.id ? 'on' : ''}' aria-pressed='${!!me && s.id == me.id}' onclick="SWV.anak('${s.id}')">${av(s, 26)}<span>${esc(String(s.nama || '').trim().split(/\s+/)[0] || 'Anak')}</span></button>`).join('')}</div>`;
+  }
   const pad = n => String(n).padStart(2, '0');
   const nm = id => ((db.siswa.find(s => s.id == id) || (db.rekan || []).find(s => s.id == id) || {}).nama) || 'Siswa lain';
   const sum = (l, f) => l.reduce((a, x) => a + f(x), 0);
-  const head = (t, s) => `<h2>${t}</h2><p class='sub'>${s}</p>`;
+  const head = (t, s) => `${sel()}<h2>${t}</h2><p class='sub'>${s}</p>`;
   const noMe = t => head(t, 'Data Anda belum tersedia.') + `<div class='card'>${empty('Akun Anda belum ditautkan ke data siswa. Hubungi wali kelas atau admin sekolah.')}</div>`;
-  const hint = `<div class='lab' style='margin-top:6px'>Bila Anda yakin data ini ada, hubungi admin sekolah (menu ini memerlukan pembaruan database 011).</div>`;
+  const hint = () => `<div class='lab' style='margin-top:6px'>Bila Anda yakin data ini ada, hubungi admin sekolah (menu ini memerlukan pembaruan database ${Data.role == 'ortu' ? '019' : '011'}).</div>`;
   const kv = (a, b) => `<div class='kv'><span class='mu'>${a}</span><b>${b}</b></div>`;
   const stat = (lab, big, sub, cls) => `<div class='card'><div class='lab'>${lab}</div><div class='big ${cls || ''}'>${big}</div>${sub ? `<div class='lab'>${sub}</div>` : ''}</div>`;
   const first = s => String(s.nama || '').trim().split(/\s+/)[0] || 'Siswa';
@@ -88,7 +101,7 @@ ${g('Orang tua', f('Ayah', s.ayah) + f('Ibu', s.ibu) + f('Pekerjaan', s.pkj))}${
 </div>
 <div class='chg'>${pn('Transaksi terbaru', 'tabungan Anda', tx.length ? tx.map(t => `<div class='item'>${t.jenis == 'setor' ? 'Setoran' : 'Penarikan'}<span style='float:right'>${BK.tabAmt(t)}</span><div class='lab'>${fd(t.tgl)} · ${esc(t.cat || (t.jenis == 'setor' ? 'setor' : 'tarik'))}</div></div>`).join('') : empty('Belum ada transaksi.'))}${pn('Agenda mendatang', ag.length + ' agenda', ag.length ? ag.slice(0, 4).map(a => `<div class='item'><b>${esc(a.judul)}</b><div class='lab'>${fd(a.tgl)}${a.ket ? ' · ' + esc(a.ket) : ''}</div></div>`).join('') : empty('Belum ada agenda mendatang.'))}</div>`;
   }
-  const portalView = () => top() + analitik();
+  const portalView = () => sel() + top() + analitik();
 
   /* ================= 3. Keuangan ================= */
   /* Tabungan dan Kas Kelas memakai gaya rekening koran (statement.js): kolom tanggal & waktu, referensi, debit, kredit, saldo. */
@@ -120,7 +133,7 @@ ${g('Orang tua', f('Ayah', s.ayah) + f('Ibu', s.ibu) + f('Pekerjaan', s.pkj))}${
       + ST.sum([{ l: 'Saldo kas', v: rp(i - o), c: 'hero' }, { l: 'Pemasukan', v: rp(i), c: 'in' }, { l: 'Pengeluaran', v: rp(o), c: 'out' }])
       + `<div class='swb'><button type='button' onclick='A.cetakKas()'>Cetak buku kas bulan ini</button></div>`
       + `<div class='card' style='margin-bottom:14px'><div class='ch'><h3>Kas masuk dan keluar</h3><span class='lab'>6 bulan terakhir</span></div>${CH.bars(ks.map(mlab), [{ n: 'Masuk', c: 'var(--ok)', v: ks.map(m => f(m, 'masuk')) }, { n: 'Keluar', c: 'var(--er)', v: ks.map(m => f(m, 'keluar')) }])}</div>`
-      + `<div class='card stcard'>${ST.t([['Tanggal &amp; Waktu', 'tgl'], ['No. Bukti', 'ref'], ['Uraian', 'ket'], ['Masuk', 'kre', 'r'], ['Keluar', 'deb', 'r'], ['Saldo', 'sal', 'r']], rows, { empty: 'Belum ada catatan kas.' })}${L.length ? '' : hint}</div>`;
+      + `<div class='card stcard'>${ST.t([['Tanggal &amp; Waktu', 'tgl'], ['No. Bukti', 'ref'], ['Uraian', 'ket'], ['Masuk', 'kre', 'r'], ['Keluar', 'deb', 'r'], ['Saldo', 'sal', 'r']], rows, { empty: 'Belum ada catatan kas.' })}${L.length ? '' : hint()}</div>`;
   }
 
   let SIM = today().slice(0, 7);   // bulan yang ditampilkan di halaman Iuran
@@ -184,7 +197,7 @@ ${g('Orang tua', f('Ayah', s.ayah) + f('Ibu', s.ibu) + f('Pekerjaan', s.pkj))}${
     const rows = l.map(j => `<tr><td><b>${esc(j.jab)}</b></td><td>${esc(nm(j.sid))}${s && j.sid == s.id ? " <span class='tag'>Anda</span>" : ''}</td></tr>`);
     return head('Struktur Kelas', 'Pengurus kelas seperti ketua, sekretaris, bendahara, dan seksi.')
       + `<div class='grid'>${stat('Wali kelas', esc(db.cfg.walikelas) || '-', s ? 'Kelas ' + esc(s.kelas) : '')}${stat('Jabatan Anda', mine.length ? esc(mine.map(j => j.jab).join(', ')) : 'Anggota kelas', mine.length ? 'Terima kasih sudah berkontribusi' : '')}</div>`
-      + `<div class='card'><h3>Pengurus kelas</h3>${tbl(['Jabatan', 'Nama'], rows, 'Belum ada pengurus kelas.')}${l.length ? '' : hint}</div>`;
+      + `<div class='card'><h3>Pengurus kelas</h3>${tbl(['Jabatan', 'Nama'], rows, 'Belum ada pengurus kelas.')}${l.length ? '' : hint()}</div>`;
   }
 
   let SM = today().slice(0, 7);
@@ -226,15 +239,17 @@ ${g('Orang tua', f('Ayah', s.ayah) + f('Ibu', s.ibu) + f('Pekerjaan', s.pkj))}${
   }
   function voting() {
     const s = ME(); vsync();
-    const intro = head('Voting', 'Pilih satu kandidat dari akun Anda. Satu akun satu suara, rahasia, dan tidak dapat diubah setelah dikirim.');
+    const intro = head('Voting', own() ? 'Pilih satu kandidat dari akun Anda. Satu akun satu suara, rahasia, dan tidak dapat diubah setelah dikirim.' : 'Jalannya pemilihan kelas. Siswa memberi suara dari akunnya sendiri (satu akun satu suara, rahasia), jadi akun orang tua hanya dapat melihat.');
     if (!s) return noMe('Voting');
     if (Data.voteOk === false) return intro + `<div class='card'>${empty('Fitur voting per akun belum aktif.')}<div class='lab' style='margin-top:6px'>Hubungi admin sekolah (perlu pembaruan database 015).</div></div>`;
-    const tot = (db.rekan || []).length || 1;
+    const tot = v => { const ks = new Set((v.kand || []).map(k => ((db.rekan || []).find(r => r.id == k) || (db.siswa.find(x => x.id == k)) || {}).kelas).filter(Boolean)); return (db.rekan || []).filter(r => !ks.size || ks.has(r.kelas)).length || 1 };
     return intro + (db.vote.length ? db.vote.map(v => {
-      const c = v.hitung || {}, n = v.total || 0, mine = v.saya || '', mx = Math.max(0, ...v.kand.map(k => c[k] || 0)), sel = VSEL[v.id] || '';
-      const st = !v.open ? 'Anda ' + (mine ? 'sudah memberikan suara' : 'tidak memberikan suara') : mine ? 'Suara Anda sudah tercatat' : 'Anda belum memberikan suara';
+      const c = v.hitung || {}, n = v.total || 0, mine = own() ? (v.saya || '') : '', mx = Math.max(0, ...v.kand.map(k => c[k] || 0)), sel = VSEL[v.id] || '';
+      const st = !own() ? (v.open ? 'Pemilihan sedang berlangsung' : 'Pemilihan sudah ditutup') : !v.open ? 'Anda ' + (mine ? 'sudah memberikan suara' : 'tidak memberikan suara') : mine ? 'Suara Anda sudah tercatat' : 'Anda belum memberikan suara';
       let body;
-      if (v.open && !mine) {
+      if (v.open && !own()) {
+        body = v.kand.map(k => `<div class='swv'><span>${esc(nm(k))}</span></div>`).join('') + `<div class='vdone'><b>Siswa memberi suara dari akunnya sendiri.</b><div class='lab'>Hasil ditampilkan setelah pemilihan ditutup.</div></div>`;
+      } else if (v.open && !mine) {
         body = `<div role='radiogroup' aria-label='Pilih kandidat ${esc(v.judul)}'>${v.kand.map(k => `<button type='button' class='vopt' role='radio' aria-checked='${sel == k}' data-vk='${esc(k)}' onclick=\"SWV.pilih('${v.id}','${esc(k)}',this)\"><span class='dot'></span><span>${esc(nm(k))}</span></button>`).join('')}</div>`
           + `<button type='button' class='p vgo' id='vg-${v.id}' ${sel ? '' : 'disabled'} onclick=\"SWV.kirim('${v.id}')\">Kirim suara</button>`;
       } else if (v.open) {
@@ -242,13 +257,14 @@ ${g('Orang tua', f('Ayah', s.ayah) + f('Ibu', s.ibu) + f('Pekerjaan', s.pkj))}${
       } else {
         body = v.kand.map(k => `<div class='swv'><span>${esc(nm(k))}${mine == k ? " <span class='tag'>Pilihan Anda</span>" : ''}${mx && (c[k] || 0) == mx ? " <span class='tag'>Unggul</span>" : ''}</span><span><b>${c[k] || 0}</b> suara · ${n ? Math.round((c[k] || 0) / n * 100) : 0}%</span></div><div class='meter'><i style='width:${n ? (c[k] || 0) / n * 100 : 0}%'></i></div>`).join('');
       }
-      return `<div class='card' style='margin-bottom:12px'><h3>${esc(v.judul)} <span class='tag'>${v.open ? 'Dibuka' : 'Ditutup'}</span></h3>${body}<div class='lab' style='margin-top:10px'>${n} dari ${tot} siswa sudah memilih · ${st}</div></div>`;
+      return `<div class='card' style='margin-bottom:12px'><h3>${esc(v.judul)} <span class='tag'>${v.open ? 'Dibuka' : 'Ditutup'}</span></h3>${body}<div class='lab' style='margin-top:10px'>${n} dari ${tot(v)} siswa sudah memilih · ${st}</div></div>`;
     }).join('') : `<div class='card'>${empty('Belum ada pemilihan untuk kelas Anda.')}</div>`);
   }
 
   /* ================= API ================= */
   window.SWV = {
-    hero,
+    hero, sel,
+    anak(id) { KID = id; try { localStorage.setItem(kidKey(), id) } catch (e) {} go() },
     v: { portal: portalView, tabungan, kas, iuran, pengingat, siswa, struktur, absensi, agenda, pengumuman, voting },
     pilih(id, k, el) {
       VSEL[id] = k; const g = el.parentElement;

@@ -25,7 +25,7 @@
   /* Ringkasan peran dan hak akses yang ditampilkan ke pengguna (transparansi) */
   const AKSES = {
     siswa: 'Anda dapat melihat data dan transaksi milik Anda sendiri serta informasi kelas. Anda tidak dapat mengubah data.',
-    ortu: 'Anda dapat melihat data anak yang ditautkan ke akun ini, serta pengumuman dan agenda kelas. Anda tidak dapat mengubah data.'
+    ortu: 'Anda dapat melihat data anak yang ditautkan ke akun ini serta informasi kelas (kas, struktur, agenda, pengumuman, dan jalannya voting). Anda tidak dapat mengubah data dan tidak dapat memberi suara; suara diberikan siswa dari akunnya sendiri.'
   };
 
   function hero() {

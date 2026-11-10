@@ -5,10 +5,11 @@ today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).
 fd=d=>d?new Date(d+'T00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'-';
 const KEY='sekolahhub.v1';let db,Q='',T=null,RK='';
 const ROLEL={admin:'Admin',pengurus:'Pengurus',viewer:'Hanya lihat',ortu:'Orang tua',siswa:'Siswa',pending:'Menunggu'};const portal=()=>Data.role=='ortu'||Data.role=='siswa';
-/* Akun Siswa: semua menu Keuangan dan Kelas dibuka (hanya-baca, tampilan khusus di js/siswa.js). Orang tua tetap: portal, pengumuman, agenda. */
+/* Akun portal (Siswa dan Orang tua): semua menu Keuangan dan Kelas dibuka (hanya-baca, tampilan khusus di js/siswa.js).
+   v2.22: Orang tua memakai set menu dan tampilan yang SAMA dengan Siswa; bedanya hanya data (anak yang ditautkan) dan voting (hanya siswa yang memberi suara). */
 const SWIDS=['portal','tabungan','kas','iuran','pengingat','siswa','struktur','absensi','agenda','pengumuman','voting'];
-const PORTAL_OK=()=>Data.role=='siswa'?[...SWIDS,'profil','menu','akun']:['portal','pengumuman','agenda','profil','menu','akun'];
-const vw=c=>Data.role=='siswa'&&window.SWV&&SWV.v[c]?SWV.v[c]:V[c];
+const PORTAL_OK=()=>[...SWIDS,'profil','menu','akun'];
+const vw=c=>portal()&&window.SWV&&SWV.v[c]?SWV.v[c]:V[c];
 const logA=m=>{(db.log=db.log||[]).unshift({t:Date.now(),m:String(m).replace(/<[^>]*>/g,'')});db.log.length=Math.min(db.log.length,150)};let LG=0,KF='',RB='',PID='',PT='linimasa';
 const umur=t=>{if(!t)return'';const b=new Date(t+'T00:00'),n=new Date();let y=n.getFullYear()-b.getFullYear(),m=n.getMonth()-b.getMonth();if(n.getDate()<b.getDate())m--;if(m<0){y--;m+=12}return y<0?'':y+' tahun'+(m?' '+m+' bulan':'')};
 let D={};const op=a=>a.map(x=>[x,x||'Pilih']);
@@ -376,7 +377,7 @@ const trendSvg=(sid,h)=>{const ks=[-5,-4,-3,-2,-1,0].map(mk);return CH.area(ks.m
 const trendCard=s=>pn('Perkembangan saldo','6 bulan terakhir',trendSvg(s.id,170)).replace("<div class='card'>","<div class='card' style='margin-top:14px'>");
 
 /* ===== Top bar: pencarian global, tambah cepat, notifikasi, status simpan, menu akun ===== */
-const navOk=n=>portal()?[...(Data.role=='siswa'?SWIDS:['portal','pengumuman','agenda']),'akun'].includes(n[0]):n[0]!='portal'&&n[0]!='akun'&&(n[0]!='pengguna'||Data.role=='admin');
+const navOk=n=>portal()?[...SWIDS,'akun'].includes(n[0]):n[0]!='portal'&&n[0]!='akun'&&(n[0]!='pengguna'||Data.role=='admin');
 const dstr=o=>{const d=new Date();d.setDate(d.getDate()+o);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const QA=[['Catat transaksi tabungan',()=>A.trx()],['Setoran massal per kelas',()=>A.massal()],['Catat absensi hari ini',()=>{location.hash='absensi'}],['Catat iuran',()=>{location.hash='iuran'}],['Catat kas kelas',()=>A.kas()],['Tambah siswa',()=>A.siswa()],['Buat pengumuman',()=>A.info()],['Tambah agenda',()=>A.agenda()]];
 const TB={
@@ -386,12 +387,12 @@ const TB={
   pick(){$('#gs').value='';TB.close()},
   notifs(){const n=[],w=Data.canWrite(),nom=+db.cfg.iuran||0,m0=today().slice(0,7);
     if(w){const b=db.siswa.filter(s=>!db.tab.some(t=>t.sid==s.id&&t.jenis=='setor'&&t.tgl.slice(0,7)==m0)).length;if(b)n.push({t:b+' siswa belum menabung bulan ini',s:'Kirim pengingat ke wali murid',h:'#pengingat'})}
-    if(nom){const u=db.siswa.filter(s=>paidWeek(s.id)<nom).length;if(u)n.push({t:u+' siswa iuran minggu ini belum lunas',s:'Minggu '+wkRange(wkOf(today())),h:w||Data.role=='siswa'?'#iuran':'#portal'})}
+    if(nom){const u=db.siswa.filter(s=>paidWeek(s.id)<nom).length;if(u)n.push({t:u+' siswa iuran minggu ini belum lunas',s:'Minggu '+wkRange(wkOf(today())),h:w||portal()?'#iuran':'#portal'})}
     db.agenda.filter(a=>a.tgl==today()||a.tgl==dstr(1)).forEach(a=>n.push({t:(a.tgl==today()?'Hari ini: ':'Besok: ')+a.judul,s:a.ket||'Agenda',h:'#agenda'}));
     db.siswa.filter(s=>s.tgl&&s.tgl.slice(5)==today().slice(5)).forEach(s=>n.push({t:'Ulang tahun '+s.nama,s:'Genap '+(+today().slice(0,4)-+s.tgl.slice(0,4))+' tahun',h:'#profil-'+s.id}));
     db.info.filter(a=>a.tgl>=dstr(-3)).forEach(a=>n.push({t:a.judul,s:'Pengumuman · '+fd(a.tgl),h:'#pengumuman'}));
     if(!portal())db.vote.filter(v=>v.open).forEach(v=>n.push({t:'Pemilihan dibuka: '+v.judul,s:'Siswa memberi suara lewat akunnya',h:'#voting'}));
-    else if(Data.role=='siswa')db.vote.filter(v=>v.open&&!v.saya).forEach(v=>n.push({t:'Pemilihan dibuka: '+v.judul,s:'Berikan suara Anda',h:'#voting'}));
+    else db.vote.filter(v=>v.open&&(Data.role!='siswa'||!v.saya)).forEach(v=>n.push({t:'Pemilihan dibuka: '+v.judul,s:Data.role=='siswa'?'Berikan suara Anda':'Siswa memberi suara lewat akunnya',h:'#voting'}));
     return n},
   find(q){q=q.trim().toLowerCase();if(!q)return{s:[],m:[],a:[]};
     return{s:db.siswa.filter(s=>(s.nama+' '+s.nis+' '+s.kelas).toLowerCase().includes(q)).slice(0,6),
@@ -440,7 +441,7 @@ V.portal=()=>{const mo=today().slice(0,7),nom=+db.cfg.iuran||0,ag=db.agenda.filt
 
 /* ===== Autentikasi & boot ===== */
 async function start(){
-  $('#auth').hidden=true;load(await Data.pull());Brand.sync();if(Data.role=='siswa')NAV.find(n=>n[0]=='portal')[1]='Portal Saya';TB.init();go();window.hideSplash&&hideSplash();Theme.bind({get:Data.getTema,set:Data.setTema});if(portal()&&window.ACC)ACC.welcome();
+  $('#auth').hidden=true;load(await Data.pull());Brand.sync();if(portal())NAV.find(n=>n[0]=='portal')[1]='Portal Saya';TB.init();go();window.hideSplash&&hideSplash();Theme.bind({get:Data.getTema,set:Data.setTema});if(portal()&&window.ACC)ACC.welcome();
   Data.onError=async e=>{toast(e.code=='42501'||/row-level|permission/i.test(e.message)?'Anda tidak punya izin untuk perubahan ini.':'Gagal menyimpan: '+e.message);try{load(await Data.pull());go()}catch(x){console.warn(x);toast('Server tidak terjangkau. Perubahan Anda ditahan dan dikirim ulang pada penyimpanan berikutnya.')}};
   Data.subscribe(async t=>{if($('#dlg').open||cur=='ubah'||(window.PGD&&PGD()))return false;try{await Data.refresh(db,t);enrichKas();go()}catch(e){console.warn(e)}})}
 async function boot(){

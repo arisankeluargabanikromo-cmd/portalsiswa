@@ -150,6 +150,7 @@
     user: null, role: 'pending', onError: null, rb: null, onStatus: null, status: 'ok', lastError: null,
     _st(s) { Data.status = s; if (Data.onStatus) Data.onStatus(s); },
     canWrite: () => ['admin', 'pengurus'].includes(Data.role),
+    portal: () => Data.role === 'siswa' || Data.role === 'ortu',   // akun portal: tampilan yang sama (js/siswa.js)
 
     async init() {
       if (!/^https:\/\/.+\.supabase\.co/.test(CFG.SUPABASE_URL || '') || !CFG.SUPABASE_ANON_KEY)
@@ -193,7 +194,7 @@
     async logoutAll() { try { await sb.auth.signOut({ scope: 'global' }) } catch (e) { try { await sb.auth.signOut() } catch (e2) {} } location.reload(); },
 
     async loadTable(db, k) {
-      if (k === 'vote' && Data.role === 'siswa') {   // akun Siswa tidak membaca tabel voting (suara rahasia); hanya rekap lewat voting_siswa() (migrasi 015)
+      if (k === 'vote' && Data.portal()) {   // akun Siswa dan Orang tua tidak membaca tabel voting (suara rahasia); hanya rekap lewat voting_siswa() (migrasi 015, 019)
         db.vote = (await Data.voteSiswa()) || [];
         snap[k] = new Map(db.vote.map(it => [it.id, JSON.stringify(toRow(k, it))]));
         return db;
@@ -235,14 +236,14 @@
     async probeBank() {
       try { const { error } = await sb.from('tabungan').select('ref').limit(1); Data.bankOk = !error } catch (e) { Data.bankOk = false }
     },
-    // Akun Siswa: nama teman sekelas (id, nama, kelas) untuk menampilkan nama pengurus dan kandidat voting. Fungsi rekan_kelas() dari migrasi 011.
+    // Akun portal (Siswa, Orang tua): nama siswa sekelas (id, nama, kelas) untuk menampilkan nama pengurus dan kandidat voting. Fungsi rekan_kelas() dari migrasi 011 (Orang tua: migrasi 019).
     // Gagal-diam bila migrasi belum dijalankan; db.rekan tidak pernah ikut disimpan ke server.
     async loadRekan(db) {
       db.rekan = [];
-      if (Data.role !== 'siswa') return;
+      if (!Data.portal()) return;
       try { const { data, error } = await sb.rpc('rekan_kelas'); if (!error && Array.isArray(data)) db.rekan = data; } catch (e) { /* abaikan */ }
     },
-    // Voting akun Siswa. Mengembalikan daftar pemilihan untuk kelas siswa: {id, judul, open, kand, hitung:{kandidat:jumlah}, total, saya}.
+    // Voting akun portal (Orang tua hanya melihat; saya selalu kosong). Mengembalikan daftar pemilihan untuk kelas siswa: {id, judul, open, kand, hitung:{kandidat:jumlah}, total, saya}.
     // null bila migrasi 015 belum dijalankan atau jaringan gagal; Data.voteOk menyimpan statusnya.
     voteOk: null,
     async voteSiswa() {

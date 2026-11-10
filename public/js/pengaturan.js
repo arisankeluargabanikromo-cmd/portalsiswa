@@ -3,7 +3,7 @@
    $, esc, rp, fd, today, toast, logA, ico, sis, saldo, total, kelasList, csv, WA_TAB, WA_IUR. */
 (() => {
   'use strict';
-  const VER = '2.21.0';
+  const VER = '2.22.1';
   window.APP_VER = VER;
   const adm = () => Data.role == 'admin';
   const NUMK = ['iuran', 'saldomin', 'limitotor'];   // kolom konfigurasi bertipe angka
@@ -53,7 +53,7 @@
 
   /* Urutan kolom: Admin, Pengurus, Lihat, Ortu, Siswa. y = ya, n = tidak, a = "Anak" (ortu), s = "Sendiri" (siswa) */
   const MX = [
-    ['Melihat data siswa, tabungan, iuran, dan absensi', 'yyyas'], ['Melihat pengumuman dan agenda', 'yyyyy'],
+    ['Melihat data siswa, tabungan, iuran, dan absensi', 'yyyas'], ['Melihat pengumuman dan agenda', 'yyyyy'], ['Melihat kas kelas, struktur kelas, dan jalannya voting', 'yyyyy'], ['Memberi suara pada pemilihan kelas', 'nnnns'],
     ['Mencatat tabungan, iuran, absensi, dan kas', 'yynnn'], ['Mengelola siswa, pengumuman, agenda, voting, dan struktur', 'yynnn'],
     ['Mengunduh cadangan dan ekspor CSV', 'yyynn'], ['Mengubah identitas, logo, dan pengaturan sekolah', 'ynnnn'],
     ['Menyetujui akun, mengatur peran, menautkan akun ke siswa', 'ynnnn'], ['Memulihkan cadangan dan mereset data', 'ynnnn']

@@ -131,13 +131,11 @@
       let k; try { k = 'sh.welcome.' + Data.user.id; if (localStorage.getItem(k)) return } catch (e) { return }
       if (!db.siswa.length) return;
       try { localStorage.setItem(k, '1') } catch (e) {}
-      const sw = Data.role == 'siswa', nm = db.siswa.map(s => s.nama);
+      const sw = Data.role == 'siswa', nm = db.siswa.map(s => s.nama), kar = sw ? 'Kartu pelajar Anda' : (db.siswa.length > 1 ? 'Kartu pelajar anak Anda (pilih anak di bagian atas halaman)' : 'Kartu pelajar anak Anda');
       dlg(`<h3>Selamat datang${sw ? ', ' + esc(String(db.siswa[0].nama).split(' ')[0]) : ''}!</h3>`
-        + `<p>Akun ${sw ? 'Anda' : ''} sudah disetujui admin <b>${esc(db.cfg.sekolah)}</b>.</p>`
-        + (sw
-          ? `<ul class='wl'><li>Kartu pelajar Anda tampil di bagian paling atas Beranda.</li><li>Anda dapat membuka menu <b>Keuangan</b> (Tabungan, Kas Kelas, Iuran, Pengingat) dan <b>Kelas</b> (Data Siswa, Struktur Kelas, Absensi, Agenda, Pengumuman, Voting).</li><li>Akun ini <b>hanya-lihat</b>. Tidak ada data yang bisa diubah, dan data pribadi siswa lain tidak dapat dilihat.</li></ul>`
-          : `<ul class='wl'><li>Anda dapat melihat data ${esc(nm.join(', '))}: saldo tabungan, status iuran, kehadiran, dan profil.</li><li>Pengumuman dan agenda sekolah tampil di Beranda.</li><li>Akun ini <b>hanya-lihat</b>. Tidak ada data yang bisa diubah, dan data siswa lain tidak dapat dilihat.</li></ul>`)
-        + `<div class='pbar' style='justify-content:flex-end;margin:16px 0 0'><button class='p' id='x' type='button'>Mulai</button></div>`);   // .pbar: tidak disembunyikan mode baca-saja (.ro)
+        + `<p>Akun ${sw ? 'Anda' : 'untuk ' + esc(nm.join(', '))} sudah disetujui admin <b>${esc(db.cfg.sekolah)}</b>.</p>`
+        + `<ul class='wl'><li>${kar} tampil di bagian paling atas Beranda.</li><li>Anda dapat membuka menu <b>Keuangan</b> (Tabungan, Kas Kelas, Iuran, Pengingat) dan <b>Kelas</b> (Data Siswa, Struktur Kelas, Absensi, Agenda, Pengumuman, Voting).</li><li>Akun ini <b>hanya-lihat</b>. Tidak ada data yang bisa diubah${sw ? '' : ' dan suara pemilihan hanya diberikan siswa dari akunnya sendiri'}, dan data pribadi siswa lain tidak dapat dilihat.</li></ul>`
+      + `<div class='pbar' style='justify-content:flex-end;margin:16px 0 0'><button class='p' id='x' type='button'>Mulai</button></div>`);   // .pbar: tidak disembunyikan mode baca-saja (.ro)
     }
   };
   Object.assign(A, { setujui, peran, cabut });
