@@ -138,3 +138,13 @@
 .ro #dlg .acts button#x,.ro #dlg .acts button#pr,.ro #dlg .acts button#vx,.ro #dlg .acts button#vok{display:inline-flex!important}
 
 @media print{.swh,.swm-h{display:none!important}}
+
+/* ============ v2.22: pemilih anak (akun Orang tua dengan lebih dari satu anak) ============ */
+.swk-sel{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.swk-sel button{display:inline-flex;align-items:center;gap:8px;min-height:0;height:40px;padding:0 14px 0 6px;border-radius:999px;font-weight:600}
+.swk-sel button[aria-pressed="true"],.swk-sel button.on{background:var(--pr);border-color:var(--pr);color:#fff}
+.swm-h .swk-sel{margin:0 0 10px;justify-content:center}
+/* Di Beranda ponsel, pemilih berada di atas gradien header: pilihan aktif putih, lainnya transparan berbingkai */
+.swm-h .swk-sel button{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.45);color:#fff}
+.swm-h .swk-sel button[aria-pressed="true"]{background:#fff;border-color:#fff;color:#0b4f4a}
+@media print{.swk-sel{display:none!important}}
