@@ -35,3 +35,13 @@ td.r, th.r, .big, .sdl, .in, .out, .st-n, .num { font-variant-numeric: tabular-n
 button:not(:disabled):active { transform: translateY(1px); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
 @media print { .skip, .pro-bar, .pro-idle { display: none !important; } }
+
+/* v2.20: bilah alat desktop lebih ringkas agar tombol utama tidak jatuh sendirian ke baris kedua */
+@media (min-width: 901px) {
+  .bar { gap: 8px; }
+  .bar > button, .bar .stbtns button { padding-inline: 13px; }
+  .bar select { min-width: 150px; }
+  .bar > input[type=search] { flex: 1 1 230px; max-width: 290px; min-width: 190px; }
+}
+/* Pilihan bulat/kotak mengikuti warna tema */
+input[type=radio], input[type=checkbox] { accent-color: var(--pr); }

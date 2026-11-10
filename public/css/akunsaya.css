@@ -1,0 +1,15 @@
+/* SekolahHub v2.19: halaman Akun Saya. Kelas berawalan .aks- (JANGAN memakai .akn: itu milik baris akun di akun.js). */
+.aks-hero{display:flex;align-items:center;gap:16px;margin:0 0 16px;padding:18px 20px;border-radius:18px;background:linear-gradient(135deg,color-mix(in srgb,var(--pr) 16%,var(--sf)),var(--sf) 70%)}
+.aks-av{flex:none;width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font-size:26px;font-weight:800;color:var(--pt);background:linear-gradient(145deg,var(--pr),var(--pr2));box-shadow:0 8px 20px -8px var(--pr)}
+.aks-id{min-width:0;display:flex;flex-direction:column;gap:2px}
+.aks-id b{font-size:18px;line-height:1.25;overflow-wrap:anywhere}
+.aks-id .mu{font-size:13.5px;overflow-wrap:anywhere}
+.aks-role{margin-left:auto;flex:none;padding:6px 14px;border-radius:999px;font-size:12.5px;font-weight:800;letter-spacing:.02em;color:var(--pr);background:color-mix(in srgb,var(--pr) 14%,transparent);border:1px solid color-mix(in srgb,var(--pr) 30%,transparent)}
+.aks-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;align-items:start}
+.aks-s{margin-bottom:16px}
+.aks-s .kv span.mu{font-size:13.5px}
+.aks-s .kv b{font-weight:650;overflow-wrap:anywhere}
+.aks-s .pbar{display:flex;flex-wrap:wrap;gap:8px}
+.aks-note{margin:12px 0 0;font-size:12.5px;line-height:1.55;color:var(--mu)}
+@media(max-width:900px){.aks-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.aks-hero{padding:14px;gap:12px}.aks-av{width:48px;height:48px;font-size:21px}.aks-role{padding:5px 11px;font-size:11.5px}.aks-id b{font-size:16px}.aks-s .pbar button{flex:1 1 100%}}

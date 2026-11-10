@@ -1,0 +1,39 @@
+/* SekolahHub v2.21: tata letak layar lebar (zoom-out) dan header profil.
+ * Masalah yang diperbaiki:
+ *  1. Header profil memakai flex satu baris: kolom nama berebut ruang dengan 5 tombol, menyempit, membungkus, lalu tumbuh ke atas
+ *     sehingga nama jatuh ke area sampul (teks gelap di atas gradien) dan chip akun pecah menjadi dua baris.
+ *  2. Konten (main) rata kiri dengan lebar maksimum tetap, sehingga di layar sangat lebar sisi kanan kosong dan halaman terasa miring.
+ * Berkas ini dimuat setelah style.css/mobile.css/statement.css. Aturan header hanya berlaku di atas 860 px (di bawahnya mobile.css tetap berlaku).
+ */
+
+/* ---------- 1. Konten dipusatkan dan sedikit melebar di layar besar ---------- */
+main { margin-inline: auto; }
+@media (min-width: 1900px) {
+  main { max-width: 1280px; }
+  main:has(.board) { max-width: 1600px; }
+}
+
+/* ---------- 2. Header profil: grid. Avatar menimpa sampul; nama, chip, dan tombol selalu di area putih ---------- */
+@media (min-width: 861px) {
+  .card.pf .hd {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "av who" "av bar";
+    column-gap: 24px; row-gap: 14px; align-items: start;
+    margin-top: 0; padding: 0 24px 20px;
+  }
+  .card.pf .hd > :first-child { grid-area: av; margin-top: -64px; position: relative; }   /* hanya avatar yang naik ke sampul */
+  .card.pf .hd .who { grid-area: who; min-width: 0; padding: 16px 0 0; }
+  .card.pf .hd .bar { grid-area: bar; margin: 0; padding: 0; justify-content: flex-start; }
+}
+/* Nama panjang tidak pernah memotong/menimpa; ukuran mengikuti lebar tetapi dibatasi */
+.card.pf .hd h2 { font-size: clamp(22px, 1.1vw + 14px, 30px); line-height: 1.18; overflow-wrap: anywhere; text-wrap: balance; }
+.card.pf .hd .pfcs { margin-top: 10px; }
+/* Chip akun tidak pecah menjadi dua baris berbentuk pil */
+.card.pf .akc { max-width: 100%; overflow-wrap: anywhere; }
+.card.pf .hd .akn { margin-top: 10px; }
+
+/* Tombol kamera di avatar kecil (ponsel/tablet) tidak menutupi inisial */
+@media (max-width: 860px) {
+  .card.pf .cam { width: 30px; height: 30px; right: -6px; bottom: 2px; }
+}
