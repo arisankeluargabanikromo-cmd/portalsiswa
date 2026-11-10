@@ -1,5 +1,13 @@
 # SekolahHub
 
+> **v2.21.0**: perbaikan tata letak saat zoom-out (header profil, konten dipusatkan di layar lebar). Lihat `CHANGELOG_2.21.0.md`.
+>
+> **v2.20.0**: perapihan tampilan (halaman Akun Saya dirancang ulang, bilah alat desktop satu baris, grafik batang tidak lagi membengkak). Lihat `CHANGELOG_2.20.0.md`; perkakas uji tampilan di `tools/visual/`.
+>
+> **v2.19.0**: menu **Akun Saya** di grup Sistem untuk akun Siswa dan Orang tua (profil, ganti kata sandi, keluar dari semua perangkat, tampilan). Staf tetap memakai Pengaturan > Akun. Lihat `CHANGELOG_2.19.0.md`.
+>
+> **v2.18.0**: **Kuitansi PDF dengan QR verifikasi** (tombol *PDF* di bukti tabungan, kas, iuran) dan halaman publik `/verifikasi`. Jalankan `supabase/migrations/018_verifikasi_transaksi.sql` agar QR dapat diverifikasi. Lihat `CHANGELOG_2.18.0.md`.
+>
 > **v2.17.0**: **Scan QR kartu ID** untuk absen hadir dan setor cepat (tombol *Scan QR* di Absensi, atau menu *+ Tambah*). Butuh HTTPS dan izin kamera. Lihat `CHANGELOG_2.17.0.md`.
 >
 > **v2.16.0**: nama siswa tidak lagi tersimpan di uraian kas turunan iuran (jalankan `supabase/migrations/017_privasi_kas_iuran.sql`, lalu `supabase/tests/privasi_check.sql`). Tanpa migrasi, aplikasi tetap berjalan.
