@@ -359,7 +359,7 @@ ${rows(items, fitCls(items))}
   }
 
   /* ================= API publik ================= */
-  window.IDC = {
+  window.IDC = { QR,
     on: () => SW == 'kartu',
     tabs(a) {
       const ic = ico(`<rect x='3' y='5' width='18' height='14' rx='2.5'/><circle cx='9' cy='11' r='2'/><path d='M14 10h4M14 14h4M6 16.5c.6-1.5 1.6-2.2 3-2.2s2.4.7 3 2.2'/>`);

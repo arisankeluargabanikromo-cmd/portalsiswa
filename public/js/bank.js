@@ -123,7 +123,7 @@
       .concat(t.cat ? [['Keterangan', esc(t.cat)]] : [], orig ? [['Membatalkan', rf(orig.ref)]] : [], byRev ? [['Dibatalkan oleh', rf(byRev.ref)]] : [],
         [['Saldo setelah transaksi', rp(row ? row.bal : saldo(t.sid))], ['Petugas', esc(t.petugas || '-')], ['Status', stTag(st)]]);
     show(rcpt({ title: st === 'Dibatalkan' ? 'Transaksi Dibatalkan' : 'Transaksi Berhasil', warn: st === 'Dibatalkan', amount: (e < 0 ? '−' : '') + rp(Math.abs(e)), cls: e >= 0 ? 'in' : 'out', when: wkt(t.waktu) || fd(t.tgl), rows, foot: 'Bukti ini dicetak dari ' + esc(Brand.name()) + '. Transaksi bersifat permanen; koreksi hanya melalui pembatalan.' })
-      + `<div class='acts'><button id='x'>Tutup</button>${wr() ? `<button onclick="A.waStruk('${t.id}')">WhatsApp wali</button>` : ''}<button class='p' onclick='BK.prt()'>Cetak</button></div>`);
+      + `<div class='acts'><button id='x'>Tutup</button>${wr() ? `<button onclick="A.waStruk('${t.id}')">WhatsApp wali</button>` : ''}<button onclick="A.pdf('tab','${t.id}')">PDF</button><button class='p' onclick='BK.prt()'>Cetak</button></div>`);
   }
   function buktiKas(k) {
     const rs = revs(db.kas), st = stat(k, rs), e = efK(k), iu = String(k.id).startsWith('iu_');
@@ -132,7 +132,7 @@
       rows: [['No. bukti', rf(k.ref)], ['Tanggal', fd(k.tgl)], ['Jenis', k.rev_of ? 'Pembatalan ' + (k.jenis == 'masuk' ? 'pemasukan' : 'pengeluaran') : k.jenis == 'masuk' ? 'Pemasukan' : 'Pengeluaran'], ['Kategori', esc(k.kat || (iu ? 'Iuran' : '-'))], ['Uraian', esc(k.ket)]]
         .concat(orig ? [['Membatalkan', rf(orig.ref)]] : [], [['Petugas', esc(k.petugas || '-')], ['Status', stTag(st)]]), foot: 'Dokumen ini adalah bukti pencatatan kas kelas.' })
       + `<div class='bk-ttd'><div>Penerima / Penyetor<div class='sp'></div>(............)</div><div>Bendahara<div class='sp'></div><b>${bend ? esc(sis(bend.sid).nama) : '(............)'}</b></div><div>Wali kelas<div class='sp'></div><b>${esc(db.cfg.walikelas) || '(............)'}</b></div></div>`
-      + `<div class='acts'><button id='x'>Tutup</button><button class='p' onclick='BK.prt()'>Cetak</button></div>`);
+      + `<div class='acts'><button id='x'>Tutup</button><button onclick="A.pdf('kas','${k.id}')">PDF</button><button class='p' onclick='BK.prt()'>Cetak</button></div>`);
   }
   function buktiIur(i) {
     const s = sis(i.sid), rs = revs(db.iuran), st = stat(i, rs), e = i.jml, orig = i.rev_of ? db.iuran.find(x => x.id == i.rev_of) : null;
@@ -140,8 +140,44 @@
     show(head('Kwitansi Iuran Kelas') + rcpt({ title: st === 'Dibatalkan' ? 'Pembayaran Dibatalkan' : 'Pembayaran Berhasil', warn: st === 'Dibatalkan', amount: (e < 0 ? '−' : '') + rp(Math.abs(e)), cls: e >= 0 ? 'in' : 'out', when: wkt(i.waktu) || fd(i.tgl), words: terb(Math.abs(e)),
       rows: [['No. referensi', rf(i.ref)], ['No. tagihan', esc(inv)], ['Nama siswa', esc(s.nama)], ['NIS / Kelas', esc(s.nis) + ' / ' + esc(s.kelas)], ['Periode', i.minggu ? esc(wkTitle(i.minggu)) : 'Iuran bulanan ' + esc(i.bulan)], ['Tanggal bayar', fd(i.tgl)]]
         .concat(i.cat ? [['Catatan', esc(i.cat)]] : [], orig ? [['Membatalkan', rf(orig.ref)]] : [], [['Petugas', esc(i.petugas || '-')], ['Status', stTag(st)]]), foot: 'Pembayaran mingguan otomatis tercatat sebagai pemasukan Kas Kelas.' })
-      + `<div class='acts'><button id='x'>Tutup</button>${wr() ? `<button onclick="BK.waIur('${i.id}')">WhatsApp wali</button>` : ''}<button class='p' onclick='BK.prt()'>Cetak</button></div>`);
+      + `<div class='acts'><button id='x'>Tutup</button>${wr() ? `<button onclick="BK.waIur('${i.id}')">WhatsApp wali</button>` : ''}<button onclick="A.pdf('iur','${i.id}')">PDF</button><button class='p' onclick='BK.prt()'>Cetak</button></div>`);
   }
+  /* ---------- Kuitansi PDF dengan QR verifikasi (v2.18; js/pdf.js + js/kuitansi.js) ---------- */
+  const plain = h => String(h == null ? '' : h).replace(/<[^>]*>/g, '');
+  const ttdBlank = [['Penyetor / Penerima', ''], ['Petugas', '']];
+  function pdfDesc(kind, id) {
+    const base = { sekolah: db.cfg.sekolah, alamat: db.cfg.alamat, telp: db.cfg.telp, app: Brand.name() };
+    if (kind === 'tab') {
+      const t = db.tab.find(x => x.id == id); if (!t) return null;
+      const s = sis(t.sid), rs = revs(db.tab), st = stat(t, rs), row = ledger(t.sid).find(x => x.t.id == t.id), e = efT(t);
+      const orig = t.rev_of ? db.tab.find(x => x.id == t.rev_of) : null, byRev = rs.has(t.id) ? db.tab.find(x => x.rev_of == t.id) : null;
+      return { ...base, judul: t.rev_of ? 'Bukti Pembatalan ' + (t.jenis === 'setor' ? 'Setoran' : 'Penarikan') : t.jenis === 'setor' ? 'Bukti Setoran Tabungan' : 'Bukti Penarikan Tabungan', status: st, ref: t.ref, amount: (e < 0 ? '-' : '') + rp(Math.abs(e)), words: terb(Math.abs(e)), when: wkt(t.waktu) || fd(t.tgl), petugas: t.petugas || '',
+        rows: [['Jenis transaksi', cap(tabLbl(t))], ['Rekening', s.nama], ['No. rekening', noRek(s)], ['NIS / Kelas', s.nis + ' / ' + s.kelas], ['Tanggal transaksi', fd(t.tgl)], ['Waktu pembukuan', wkt(t.waktu)], ['Keterangan', t.cat], ['Membatalkan', orig ? orig.ref : ''], ['Dibatalkan oleh', byRev ? byRev.ref : ''], ['Saldo setelah transaksi', rp(row ? row.bal : saldo(t.sid))], ['Petugas', t.petugas]],
+        ttd: ttdBlank, foot: 'Bukti ini sah bila nomor referensinya dapat diverifikasi lewat QR. Transaksi bersifat permanen; koreksi hanya melalui pembatalan. Bukan bukti transaksi perbankan berlisensi.' };
+    }
+    if (kind === 'kas') {
+      const k = db.kas.find(x => x.id == id); if (!k) return null;
+      const rs = revs(db.kas), st = stat(k, rs), e = efK(k), orig = k.rev_of ? db.kas.find(x => x.id == k.rev_of) : null, bend = db.struktur.find(j => /bendahara/i.test(j.jab)), iu = String(k.id).startsWith('iu_');
+      return { ...base, judul: 'Bukti Kas ' + (e >= 0 ? 'Masuk' : 'Keluar'), status: st, ref: k.ref, amount: (e < 0 ? '-' : '') + rp(Math.abs(e)), words: terb(Math.abs(e)), when: wkt(k.waktu) || fd(k.tgl), petugas: k.petugas || '',
+        rows: [['Tanggal', fd(k.tgl)], ['Waktu pembukuan', wkt(k.waktu)], ['Jenis', k.rev_of ? 'Pembatalan ' + (k.jenis == 'masuk' ? 'pemasukan' : 'pengeluaran') : k.jenis == 'masuk' ? 'Pemasukan' : 'Pengeluaran'], ['Kategori', k.kat || (iu ? 'Iuran' : '')], ['Uraian', k.ket], ['Membatalkan', orig ? orig.ref : ''], ['Petugas', k.petugas]],
+        ttd: [['Penerima / Penyetor', ''], ['Bendahara', bend ? sis(bend.sid).nama : ''], ['Wali kelas', db.cfg.walikelas || '']], foot: 'Bukti pencatatan kas kelas. Keaslian dapat diperiksa lewat QR; koreksi hanya melalui pembatalan.' };
+    }
+    if (kind === 'iur') {
+      const i = db.iuran.find(x => x.id == id); if (!i) return null;
+      const s = sis(i.sid), rs = revs(db.iuran), st = stat(i, rs), e = i.jml, orig = i.rev_of ? db.iuran.find(x => x.id == i.rev_of) : null;
+      const inv = i.minggu ? 'INV-' + i.minggu.replace(/-/g, '') + '-' + String(s.nis).replace(/\W/g, '') : '';
+      return { ...base, judul: i.rev_of ? 'Pembatalan Iuran Kelas' : 'Kwitansi Iuran Kelas', status: st, ref: i.ref, amount: (e < 0 ? '-' : '') + rp(Math.abs(e)), words: terb(Math.abs(e)), when: wkt(i.waktu) || fd(i.tgl), petugas: i.petugas || '',
+        rows: [['No. tagihan', inv], ['Nama siswa', s.nama], ['NIS / Kelas', s.nis + ' / ' + s.kelas], ['Periode', i.minggu ? plain(wkTitle(i.minggu)) : 'Iuran bulanan ' + i.bulan], ['Tanggal bayar', fd(i.tgl)], ['Catatan', i.cat], ['Membatalkan', orig ? orig.ref : ''], ['Petugas', i.petugas]],
+        ttd: [['Pembayar', ''], ['Bendahara', (() => { const j = db.struktur.find(j => /bendahara/i.test(j.jab)); return j ? sis(j.sid).nama : '' })()]], foot: 'Pembayaran mingguan otomatis tercatat sebagai pemasukan Kas Kelas. Keaslian dapat diperiksa lewat QR.' };
+    }
+    return null;
+  }
+  act('pdf', (kind, id) => {
+    if (!window.KW || !window.PDFW) return toast('Modul PDF belum termuat. Muat ulang halaman.');
+    const d = pdfDesc(kind, id); if (!d) return toast('Transaksi tidak ditemukan.');
+    if (!d.ref) return toast('Transaksi ini belum punya nomor referensi (jalankan migrasi 013).');
+    KW.pdf(d);
+  });
   /* Rekap batch (setoran massal, iuran massal, tunggakan) sebagai kertas rekening koran. rows: [[rincian, no. referensi, jumlah]] */
   function rekap(title, rows, total, note) { ST.open({ title, paper: ST.rekapPaper(title, 'Batch Summary', note, rows, total) }) }
 
@@ -166,7 +202,7 @@
             `${w ? `<button class='s' onclick="A.trx('${s.id}','setor')">Setor</button> <button class='s' onclick="A.trx('${s.id}','tarik')">Tarik</button> ` : ''}<button class='s' onclick="A.buku('${s.id}')">Mutasi</button>`]
         }), { cls: 'stm-l', empty: 'Belum ada siswa. Tambahkan di menu Data Siswa.' });
       };
-      body = `<div class='bar'><input type='search' placeholder='Cari nama, NIS, atau no. rekening' value="${esc(Q)}" oninput="Q=this.value;$('#tb').innerHTML=T()" aria-label='Cari rekening'>${kfs()}<span class='sp'></span>${pgo(`<button onclick='A.csvTrx()'>Ekspor mutasi</button>`)}${w ? `<button onclick="IMP.open('tab')">Impor Excel</button><button onclick='A.massal()'>Setoran massal</button><button class='p' onclick='A.trx()'>Setor / Tarik</button>` : ''}</div><div class='card stcard' id='tb'>${T()}</div>`;
+      body = `<div class='bar'><input type='search' placeholder='Cari nama, NIS, atau rekening' value="${esc(Q)}" oninput="Q=this.value;$('#tb').innerHTML=T()" aria-label='Cari rekening'>${kfs()}<span class='sp'></span>${pgo(`<button onclick='A.csvTrx()'>Ekspor mutasi</button>`)}${w ? `<button onclick="IMP.open('tab')">Impor Excel</button><button onclick='A.massal()'>Setoran massal</button><button class='p' onclick='A.trx()'>Setor / Tarik</button>` : ''}</div><div class='card stcard' id='tb'>${T()}</div>`;
     } else if (TS.tab == 'mut') {
       const f = TS.from || ym01(), to = TS.to || td, q = TS.q.toLowerCase();
       const l = db.tab.filter(t => t.tgl >= f && t.tgl <= to && (!TS.j || (TS.j == 'rev' ? t.rev_of : TS.j == 'batal' ? rs.has(t.id) : !t.rev_of && t.jenis == TS.j))

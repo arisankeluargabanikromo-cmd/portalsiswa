@@ -189,6 +189,8 @@
       if (error) throw new Error(/Invalid login/i.test(error.message) ? 'Kata sandi salah.' : error.message);
     },
     async logout() { await sb.auth.signOut(); location.reload(); },
+    /* v2.19: keluar dari SEMUA perangkat (mencabut seluruh sesi akun ini). Bila server menolak cakupan global, keluar dari perangkat ini saja. */
+    async logoutAll() { try { await sb.auth.signOut({ scope: 'global' }) } catch (e) { try { await sb.auth.signOut() } catch (e2) {} } location.reload(); },
 
     async loadTable(db, k) {
       if (k === 'vote' && Data.role === 'siswa') {   // akun Siswa tidak membaca tabel voting (suara rahasia); hanya rekap lewat voting_siswa() (migrasi 015)
