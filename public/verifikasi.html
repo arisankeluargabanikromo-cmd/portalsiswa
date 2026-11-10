@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#0a7571">
+<title>Verifikasi Bukti Transaksi</title>
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/verifikasi.css">
+</head>
+<body>
+<main class="vf" id="vf" aria-live="polite">
+  <header class="vf-h"><div class="vf-logo" aria-hidden="true">✓</div><div><h1>Verifikasi bukti transaksi</h1><p id="vf-sub">Memeriksa keaslian bukti yang dicetak sekolah</p></div></header>
+  <section id="vf-res" class="vf-card" aria-label="Hasil pemeriksaan"><p class="vf-load">Memeriksa…</p></section>
+  <form id="vf-form" class="vf-card vf-form" autocomplete="off" hidden>
+    <label for="vf-ref">Nomor referensi di dokumen</label>
+    <input id="vf-ref" placeholder="contoh: TRX261109-ABCD1234" autocapitalize="characters" spellcheck="false" maxlength="24">
+    <button type="submit">Periksa</button>
+  </form>
+  <p class="vf-note">Halaman ini hanya menampilkan data minimal. Pastikan <b>nomor referensi, tanggal, dan nominal</b> di layar sama dengan yang tertulis di dokumen. Bila berbeda, dokumen tidak dapat dipercaya; hubungi pihak sekolah.</p>
+</main>
+<script src="vendor/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/verifikasi.js"></script>
+</body>
+</html>
