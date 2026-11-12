@@ -1,5 +1,7 @@
 # SekolahHub
 
+> **v2.23.0:** hak akses **Ketua, Sekretaris, Bendahara** kelas (akun Siswa + jabatan, menu *Tugas Kelas*, wewenang terbatas dan diperiksa server). **Wajib** menjalankan migrasi `020_pengurus_kelas.sql`; belum diuji di Postgres, coba di staging dulu. Rincian: `CHANGELOG_2.23.0.md`.
+
 > **v2.22.0:** akun Orang tua memakai tampilan yang sama dengan akun Siswa (pemilih anak bila lebih dari satu anak; voting hanya-lihat). **Wajib** menjalankan migrasi `019_portal_ortu_setara_siswa.sql`. Rincian: `CHANGELOG_2.22.0.md`.
 
 > **v2.21.0**: perbaikan tata letak saat zoom-out (header profil, konten dipusatkan di layar lebar). Lihat `CHANGELOG_2.21.0.md`.
