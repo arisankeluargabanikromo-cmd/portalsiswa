@@ -14,6 +14,8 @@
     ['admin', 'Admin', 'Akses penuh, termasuk pengaturan dan akun']
   ];
   const KJ = { siswa: 'Siswa', ortu: 'Orang tua', staf: 'Guru / staf' };
+  const JB = [['ketua', 'Ketua', 'Absensi hari ini, pengumuman dan agenda kelas'], ['sekretaris', 'Sekretaris', 'Absensi (7 hari), pengumuman dan agenda kelas'], ['bendahara', 'Bendahara', 'Iuran dan kas kelas, dengan batas harian']];
+  const jbTag = u => (u.jabatan || []).map(j => `<span class='tag'>${esc((JB.find(x => x[0] == j) || [0, j])[1])}</span>`).join(' ');
   let U = [], LN = {}, FLT = 'semua';
 
   const dlg = (html, wire) => { const d = $('#dlg'); d.innerHTML = html; d.showModal(); const x = d.querySelector('#x'); if (x) x.onclick = () => d.close(); if (wire) wire(d); return d };
@@ -38,6 +40,7 @@
     let role = force || (u.role != 'pending' ? u.role : (u.klaim_jenis == 'siswa' ? 'siswa' : u.klaim_jenis == 'ortu' ? 'ortu' : 'viewer'));
     if (role == 'siswa' && !ext) role = 'viewer';
     const sel = new Set(cur0.length ? cur0 : (m && (role == 'siswa' || role == 'ortu') ? [m.id] : []));
+    const jsel = new Set((u.jabatan || []).filter(j => JB.some(x => x[0] == j)));
     const taken = new Map(); U.forEach(x => { if (x.role == 'siswa' && x.id != uid) (LN[x.id] || []).forEach(s => taken.set(s, x.email)) });
     const isNew = u.role == 'pending';
 
@@ -45,11 +48,13 @@
       + `<div class='akb'><b>${esc(u.email)}</b><span class='lab'>Mendaftar ${fd(String(u.created_at).slice(0, 10))}${u.disetujui_pada ? ' · disetujui ' + fd(String(u.disetujui_pada).slice(0, 10)) : ''}</span><div class='akn'>${claimHtml(u)}</div></div>`
       + `<h4 class='sh4'>Peran</h4><div class='rls' role='radiogroup' aria-label='Peran'>${ROLES.map(r => `<label class='rl ${r[0] == role ? 'on' : ''} ${r[0] == 'siswa' && !ext ? 'off' : ''}'><input type='radio' name='rl' value='${r[0]}' ${r[0] == role ? 'checked' : ''} ${r[0] == 'siswa' && !ext ? 'disabled' : ''}><span><b>${r[1]}</b><small>${r[2]}</small></span></label>`).join('')}</div>`
       + (ext ? '' : `<div class='nt' style='margin-top:10px'>Peran <b>Siswa</b> membutuhkan migrasi <b>010</b> di Supabase. Lihat README.</div>`)
-      + `<div id='pks'></div><div class='msg' id='ake'></div>`
+      + `<div id='pks'></div><div id='pjb'></div><div class='msg' id='ake'></div>`
       + `<div class='acts'><button id='x' type='button'>Batal</button><span class='sp'></span><button class='p' id='aok' type='button'>${isNew ? 'Setujui' : 'Simpan'}</button></div>`, d => {
       const er = t => { d.querySelector('#ake').textContent = t || '' };
       const draw = () => {
-        const one = role == 'siswa', many = role == 'ortu', box = d.querySelector('#pks');
+        const one = role == 'siswa', many = role == 'ortu', box = d.querySelector('#pks'), jb = d.querySelector('#pjb');
+        jb.innerHTML = one ? `<h4 class='sh4'>Jabatan di kelas (opsional)</h4><p class='lab'>Pengurus kelas tetap akun siswa, ditambah wewenang terbatas pada kelasnya sendiri. Semua tindakannya tercatat di Riwayat.</p>${Data.jabatanOk === false ? "<div class='nt'>Jabatan membutuhkan migrasi <b>020</b> di Supabase. Lihat README.</div>" : `<div class='rls' role='group' aria-label='Jabatan'>${JB.map(j => `<label class='rl ${jsel.has(j[0]) ? 'on' : ''}'><input type='checkbox' name='jb' value='${j[0]}' ${jsel.has(j[0]) ? 'checked' : ''}><span><b>${j[1]}</b><small>${j[2]}</small></span></label>`).join('')}</div>`}` : '';
+        jb.querySelectorAll('[name=jb]').forEach(i => { i.onchange = () => { i.checked ? jsel.add(i.value) : jsel.delete(i.value); i.closest('.rl').classList.toggle('on', i.checked) } });
         if (!one && !many) { box.innerHTML = ''; return }
         if (one && sel.size > 1) { const f = [...sel][0]; sel.clear(); sel.add(f) }
         box.innerHTML = `<h4 class='sh4'>${one ? 'Siswa pemilik akun' : 'Anak yang ditautkan'}</h4><p class='lab'>Akun ini hanya akan melihat data ${one ? 'siswa yang dipilih' : 'siswa yang dipilih'} (tabungan, iuran, absensi, profil), tanpa hak mengubah. Data siswa lain tidak terlihat.</p>`
@@ -68,8 +73,9 @@
         if (role == 'ortu' && sids.length < 1) return er('Pilih minimal satu siswa untuk akun orang tua.');
         const b = d.querySelector('#aok'); b.disabled = true; er('Menyimpan…');
         try {
-          await Data.approve(uid, role, sids);
-          logA('Akun ' + u.email + (isNew ? ' disetujui' : ' diatur') + ' sebagai ' + ROLEL[role] + (sids.length ? ' (tertaut: ' + sids.map(i => sis(i).nama).join(', ') + ')' : ''));
+          const jab = role == 'siswa' ? [...jsel] : [];
+          await Data.approve(uid, role, sids, jab);
+          logA('Akun ' + u.email + (isNew ? ' disetujui' : ' diatur') + ' sebagai ' + ROLEL[role] + (jab.length ? ' · ' + jab.map(j => JABL[j]).join(' & ') : '') + (sids.length ? ' (tertaut: ' + sids.map(i => sis(i).nama).join(', ') + ')' : ''));
           save(); d.close(); toast(isNew ? 'Akun disetujui' : 'Akun diperbarui'); refresh();
         } catch (e) { er(e.message || 'Gagal menyimpan'); b.disabled = false }
       };
@@ -98,9 +104,9 @@
     const fl = $('#ufl'); if (fl) fl.innerHTML = FL.map(f => `<button type='button' class='s chip ${FLT == f[0] ? 'on' : ''}' onclick="ACC.flt('${f[0]}')">${f[1]} · ${U.filter(u => inFlt(u, f[0])).length}</button>`).join('');
     const rows = U.filter(u => inFlt(u, FLT)).map(x => {
       const me = x.id == Data.user.id, ln = (LN[x.id] || []).map(i => db.siswa.find(s => s.id == i)).filter(Boolean);
-      const act = me ? '' : x.role == 'pending' ? `<button type='button' class='p s' onclick="A.setujui('${x.id}')">Tinjau & setujui</button>` : ['siswa', 'ortu'].includes(x.role) ? `<button type='button' class='s' onclick="A.setujui('${x.id}')">Atur tautan</button>` : '';
+      const act = me ? '' : x.role == 'pending' ? `<button type='button' class='p s' onclick="A.setujui('${x.id}')">Tinjau & setujui</button>` : ['siswa', 'ortu'].includes(x.role) ? `<button type='button' class='s' onclick="A.setujui('${x.id}')">${x.role == 'siswa' ? 'Atur tautan & jabatan' : 'Atur tautan'}</button>` : '';
       const claim = x.role == 'pending' ? `<div class='akn'>${claimHtml(x)}</div>` : '';
-      const tertaut = ['siswa', 'ortu'].includes(x.role) ? `<div class='ucl'><span class='mu'>Tertaut ke:</span> ${ln.length ? ln.map(s => `<b>${esc(s.nama)}</b> <span class='mu'>(${esc(s.kelas)})</span>`).join(', ') : "<span class='mu'>belum ditautkan</span>"}</div>` : '';
+      const tertaut = ['siswa', 'ortu'].includes(x.role) ? `<div class='ucl'><span class='mu'>Tertaut ke:</span> ${ln.length ? ln.map(s => `<b>${esc(s.nama)}</b> <span class='mu'>(${esc(s.kelas)})</span>`).join(', ') : "<span class='mu'>belum ditautkan</span>"}${x.role == 'siswa' && (x.jabatan || []).length ? ' ' + jbTag(x) : ''}</div>` : '';
       return `<div class='uc' role='listitem'><div class='ucm'><b>${esc(x.email)}</b>${me ? " <span class='tag'>Anda</span>" : ''}${claim}<div class='lab'>Terdaftar ${fd(String(x.created_at).slice(0, 10))}</div></div>`
         + `<div class='ucr'><label>Peran<select ${me ? 'disabled title="Peran akun sendiri tidak dapat diubah"' : ''} aria-label='Peran ${esc(x.email)}' onchange="A.peran('${x.id}',this.value)">${['pending', 'viewer', 'pengurus', 'siswa', 'ortu', 'admin'].map(r => `<option value='${r}' ${r == x.role ? 'selected' : ''} ${r == 'siswa' && !Data.akunExt && x.role != 'siswa' ? 'disabled' : ''}>${ROLEL[r]}</option>`).join('')}</select></label>${tertaut}</div>`
         + `<div class='uca'>${act}</div></div>`;

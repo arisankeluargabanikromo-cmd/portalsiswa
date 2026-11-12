@@ -3,10 +3,10 @@
    $, esc, rp, fd, today, toast, logA, ico, sis, saldo, total, kelasList, csv, WA_TAB, WA_IUR. */
 (() => {
   'use strict';
-  const VER = '2.22.1';
+  const VER = '2.24.0';
   window.APP_VER = VER;
   const adm = () => Data.role == 'admin';
-  const NUMK = ['iuran', 'saldomin', 'limitotor'];   // kolom konfigurasi bertipe angka
+  const NUMK = ['iuran', 'saldomin', 'limitotor', 'bataspj'];   // kolom konfigurasi bertipe angka
   const ROLE = ROLEL;
   /* Koleksi data yang dapat dihapus. DEP = ikut terhapus bila data siswa dihapus. */
   const COLL = [['siswa', 'Data siswa'], ['tab', 'Transaksi tabungan'], ['iuran', 'Pembayaran iuran'], ['absensi', 'Absensi'], ['kas', 'Kas kelas'], ['agenda', 'Agenda'], ['info', 'Pengumuman'], ['vote', 'Voting'], ['struktur', 'Struktur kelas']];
@@ -58,6 +58,14 @@
     ['Mengunduh cadangan dan ekspor CSV', 'yyynn'], ['Mengubah identitas, logo, dan pengaturan sekolah', 'ynnnn'],
     ['Menyetujui akun, mengatur peran, menautkan akun ke siswa', 'ynnnn'], ['Memulihkan cadangan dan mereset data', 'ynnnn']
   ];
+  /* v2.23: wewenang tambahan akun Siswa berjabatan. Ditegakkan server (migrasi 020, fungsi pj_*). */
+  const MJ = [
+    ['Mengisi absensi kelas', '–', 'Hari ini', '7 hari', '–'], ['Melihat rekap absensi kelas', '–', 'Ya', 'Ya', '–'],
+    ['Pengumuman dan agenda (hanya buatan sendiri)', '–', 'Ya', 'Ya', '–'], ['Mencatat iuran mingguan siswa kelas', '–', '–', '–', 'Ya'],
+    ['Mencatat kas masuk/keluar (batas harian)', '–', '–', '–', 'Ya'], ['Membatalkan catatan sendiri (hari yang sama)', '–', '–', '–', 'Ya'],
+    ['Tabungan, data pribadi siswa lain, pengaturan, akun', '–', '–', '–', '–']
+  ];
+  const mj = () => `<h4 class='sh4'>Jabatan pengurus kelas (akun Siswa)</h4><p class='lab'>Ditambahkan admin di Pengguna &gt; Atur tautan &amp; jabatan. Semua terbatas pada kelas siswanya sendiri dan tercatat di Riwayat.</p><div class='tw'><table class='tgk'><thead><tr><th>Kemampuan</th>${['Siswa biasa', 'Ketua', 'Sekretaris', 'Bendahara'].map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${MJ.map(r => `<tr><td>${r[0]}</td>${r.slice(1).map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   const mx = () => `<div class='mx' role='table' aria-label='Hak akses per peran'><div class='mh' role='columnheader'>Kemampuan</div>${['Admin', 'Pengurus', 'Lihat', 'Ortu', 'Siswa'].map(h => `<div class='mh c' role='columnheader'>${h}</div>`).join('')}`
     + MX.map(r => `<div class='mc' role='cell'>${r[0]}</div>${[...r[1]].map(c => `<div class='c ${c == 's' ? 'a' : c}' role='cell'>${c == 'y' ? `<span class='sr'>Ya</span>${P(IC.ok)}` : c == 'a' ? 'Anak' : c == 's' ? 'Sendiri' : `<span class='sr'>Tidak</span>–`}</div>`).join('')}`).join('') + `</div>`;
 
@@ -83,7 +91,7 @@
 
     /* Keuangan */
     h += sec('keuangan', head('keuangan', 'Keuangan', 'Iuran kelas dan pesan pengingat untuk wali murid.')
-      + `<div class='fg'>${inp('iuran', 'Iuran kelas per minggu (Rp)', { t: 'number' })}${Data.cfgBank ? inp('saldomin', 'Saldo mengendap minimal tabungan (Rp)', { t: 'number', ph: '0' }) + inp('limitotor', 'Batas otorisasi kata sandi (Rp)', { t: 'number', ph: '0 = nonaktif' }) : ''}</div>`
+      + `<div class='fg'>${inp('iuran', 'Iuran kelas per minggu (Rp)', { t: 'number' })}${Data.cfgBank ? inp('saldomin', 'Saldo mengendap minimal tabungan (Rp)', { t: 'number', ph: '0' }) + inp('limitotor', 'Batas otorisasi kata sandi (Rp)', { t: 'number', ph: '0 = nonaktif' }) : ''}${Data.cfgPj ? inp('bataspj', 'Batas harian kas oleh bendahara kelas (Rp)', { t: 'number', ph: '0 = tidak diizinkan' }) : ''}</div>`
       + (Data.cfgBank ? `<p class='lab'>Saldo mengendap: penarikan tidak boleh menyisakan saldo di bawah nilai ini (kecuali layanan Tutup rekening). Batas otorisasi: penarikan dan pengeluaran kas sebesar nilai ini atau lebih meminta kata sandi akun. Pembatalan transaksi selalu meminta kata sandi. ${db.cfg.tutup ? `Buku ditutup sampai <b>${fd(db.cfg.tutup)}</b> (diatur di menu Tabungan, tab Penutupan harian).` : 'Tutup buku diatur di menu Tabungan, tab Penutupan harian.'}</p>` : adm() && Data.bankOk === false ? note('Fitur perbankan (buku besar, nomor referensi, tutup buku) butuh migrasi <b>013</b> di Supabase. Lihat README, bagian Keuangan standar perbankan.') : adm() ? note('Pengaturan perbankan butuh migrasi <b>013</b> di Supabase. Lihat README, bagian Keuangan standar perbankan.') : '')
       + `<label>Pesan pengingat tabungan<textarea data-cfg='watab' rows='3' placeholder='${esc(WA_TAB)}' ${a ? '' : 'disabled'}>${esc(c.watab)}</textarea></label>`
       + `<label>Pesan pengingat iuran<textarea data-cfg='waiuran' rows='3' placeholder='${esc(WA_IUR)}' ${a ? '' : 'disabled'}>${esc(c.waiuran)}</textarea></label>`
@@ -91,7 +99,7 @@
 
     /* Hak akses */
     if (a) h += sec('akses', head('akses', 'Hak akses', 'Aturan ditegakkan di database (RLS), bukan hanya di tampilan. Akun baru berstatus Menunggu sampai admin menyetujui dan, untuk siswa atau orang tua, menautkannya ke data siswa.')
-      + `<div class='tw'>${mx()}</div><h4 class='sh4'>Akun menunggu persetujuan</h4><div id='pu'><div class='empty'>Memuat…</div></div><div id='rc' class='chips rc'></div>`
+      + `<div class='tw'>${mx()}</div>${mj()}<h4 class='sh4'>Akun menunggu persetujuan</h4><div id='pu'><div class='empty'>Memuat…</div></div><div id='rc' class='chips rc'></div>`
       + `<div class='pbar'><a class='btn' href='#pengguna'>Kelola semua pengguna</a></div>`);
 
     /* Tampilan */

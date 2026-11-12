@@ -28,8 +28,8 @@
   const lsSet = (k, v) => { try { localStorage.setItem(k, v) } catch (e) {} };
 
   /* ---------- Layanan (grid Beranda) ---------- */
-  const COL = { tabungan: 'var(--pr)', kas: 'var(--ok)', iuran: 'var(--ac)', pengingat: 'var(--er)', siswa: 'var(--inf)', struktur: 'var(--rose)', absensi: 'var(--pr2)', agenda: 'var(--rose)', pengumuman: 'var(--ac)', voting: 'var(--inf)', laporan: 'var(--mu)', pengguna: 'var(--inf)', pengaturan: 'var(--mu)' };
-  const SHORT = { tabungan: 'Tabungan', kas: 'Kas Kelas', iuran: 'Iuran', pengingat: 'Pengingat', siswa: 'Siswa', struktur: 'Struktur', absensi: 'Absensi', agenda: 'Agenda', pengumuman: 'Pengumuman', voting: 'Voting', laporan: 'Laporan', pengguna: 'Pengguna' };
+  const COL = { tabungan: 'var(--pr)', kas: 'var(--ok)', iuran: 'var(--ac)', pengingat: 'var(--er)', siswa: 'var(--inf)', struktur: 'var(--rose)', absensi: 'var(--pr2)', agenda: 'var(--rose)', pengumuman: 'var(--ac)', voting: 'var(--inf)', tugas: 'var(--pr)', laporan: 'var(--mu)', pengguna: 'var(--inf)', pengaturan: 'var(--mu)' };
+  const SHORT = { tabungan: 'Tabungan', kas: 'Kas Kelas', iuran: 'Iuran', pengingat: 'Pengingat', siswa: 'Siswa', struktur: 'Struktur', absensi: 'Absensi', agenda: 'Agenda', pengumuman: 'Pengumuman', voting: 'Voting', tugas: 'Tugas', laporan: 'Laporan', pengguna: 'Pengguna' };
   const DESC = { pengaturan: 'Identitas sekolah dan data', pengguna: 'Setujui akun dan atur peran' };
   const NOSV = ['dashboard', 'portal', 'aktivitas'];
   const MAXP = 7, DEF = ['tabungan', 'iuran', 'absensi', 'kas', 'siswa', 'pengingat', 'agenda'];

@@ -26,6 +26,8 @@
     struktur: { table: 'struktur',   order: 'created_at', cols: ['jab','sid'] },
     log:      { table: 'aktivitas',  order: 't', desc: true, keep: true, limit: 150, cols: ['t','m'] }
   };
+  /* v2.23: kolom hanya-baca yang ikut dimuat tetapi TIDAK PERNAH dikirim balik (tidak ada di cols): pembuat baris (created_by / oleh) dan sumber pengumuman. */
+  const EXTRA = { kas: ['created_by'], iuran: ['created_by'], agenda: ['oleh', 'sumber'], info: ['oleh', 'sumber'] };
   const LEDGER = new Set(['tab', 'iuran']);
   const ORDER = Object.keys(MAP); // siswa lebih dulu karena tabel lain bergantung padanya
   const DEFAULT = { open: true, kand: [], suara: {}, jml: 0, t: 0 };
@@ -60,15 +62,18 @@
       const v = r[c];
       o[c] = v == null ? (c === 'kand' ? [] : c === 'suara' ? {} : '') : v;
     }
+    for (const c of EXTRA[k] || []) if (r[c] != null) o[c] = r[c];
     return o;
   }
   // Kolom tambahan (logo, kepsek, alamat, telp) hanya dikirim bila migrasi 007 sudah dijalankan; bila tidak, simpan tetap berhasil.
-  let cfgExt = false, cfgIns = false, cfgNip = false, cfgBank = false, cfgApp = false;   // cfgApp: migrasi 014 (nama aplikasi)
+  let cfgExt = false, cfgIns = false, cfgNip = false, cfgBank = false, cfgApp = false, cfgPj = false;   // cfgPj: migrasi 020 (batas harian bendahara)
+    // cfgApp: migrasi 014 (nama aplikasi)
      // cfgBank: migrasi 013 (tutup buku, saldo mengendap, batas otorisasi)
      // cfgIns: migrasi 008 (instansi), cfgNip: migrasi 009 (NIP kepala sekolah)
   const cfgRow = c => Object.assign({ id: 1, sekolah: c.sekolah || '', tahun: c.tahun || '', walikelas: c.walikelas || '', iuran: Number(c.iuran) || 0, wa_tab: c.watab || '', wa_iuran: c.waiuran || '' },
     cfgExt ? { logo: c.logo || '', kepsek: c.kepsek || '', alamat: c.alamat || '', telp: c.telp || '' } : {}, cfgIns ? { instansi: c.instansi || '' } : {}, cfgNip ? { kepsek_nip: c.kepsek_nip || '' } : {}, cfgApp ? { app_nama: c.app_nama || 'SekolahHub' } : {},
-    cfgBank ? { tutup_buku: c.tutup || null, saldo_min: Number(c.saldomin) || 0, limit_otor: Number(c.limitotor) || 0 } : {});
+    cfgBank ? { tutup_buku: c.tutup || null, saldo_min: Number(c.saldomin) || 0, limit_otor: Number(c.limitotor) || 0 } : {},
+    cfgPj ? { batas_bendahara: Math.max(0, Number(c.bataspj) || 0) } : {});
 
   // Hitung perubahan sekarang juga (sinkron), kirim ke server lewat antrian
   function plan(db) {
@@ -150,6 +155,10 @@
     user: null, role: 'pending', onError: null, rb: null, onStatus: null, status: 'ok', lastError: null,
     _st(s) { Data.status = s; if (Data.onStatus) Data.onStatus(s); },
     canWrite: () => ['admin', 'pengurus'].includes(Data.role),
+    /* v2.23: jabatan pengurus kelas (akun Siswa saja). Wewenangnya ditegakkan server (RPC pj_*); nilai ini hanya mengatur tampilan. */
+    jabatan: [],
+    has: j => Data.role === 'siswa' && Data.jabatan.includes(j),
+    pejabat: () => Data.role === 'siswa' && Data.jabatan.length > 0,
     portal: () => Data.role === 'siswa' || Data.role === 'ortu',   // akun portal: tampilan yang sama (js/siswa.js)
 
     async init() {
@@ -163,12 +172,14 @@
     },
     async _profile(session) {
       Data.user = session ? session.user : null;
-      Data.role = 'pending'; Data.klaim = null;
+      Data.role = 'pending'; Data.klaim = null; Data.jabatan = [];
       if (!Data.user) return;
-      let r = await sb.from('profiles').select('role,klaim_jenis,klaim_nis').eq('id', Data.user.id).maybeSingle();
+      let r = await sb.from('profiles').select('role,klaim_jenis,klaim_nis,jabatan').eq('id', Data.user.id).maybeSingle();
+      if (r.error) r = await sb.from('profiles').select('role,klaim_jenis,klaim_nis').eq('id', Data.user.id).maybeSingle();   // sebelum migrasi 020
       if (r.error) r = await sb.from('profiles').select('role').eq('id', Data.user.id).maybeSingle();   // sebelum migrasi 010
       const data = r.data;
       Data.role = (data && data.role) || 'pending';
+      Data.jabatan = Data.role === 'siswa' && data && Array.isArray(data.jabatan) ? data.jabatan.filter(j => ['ketua', 'sekretaris', 'bendahara'].includes(j)) : [];
       if (data && (data.klaim_jenis || data.klaim_nis)) Data.klaim = { jenis: data.klaim_jenis || '', nis: data.klaim_nis || '' };
     },
     async login(email, password) {
@@ -210,10 +221,11 @@
       cfgNip = !!data && 'kepsek_nip' in data; Data.cfgNip = cfgNip;
       cfgBank = !!data && 'tutup_buku' in data; Data.cfgBank = cfgBank;
       cfgApp = !!data && 'app_nama' in data; Data.cfgApp = cfgApp;
+      cfgPj = !!data && 'batas_bendahara' in data; Data.cfgPj = cfgPj;
       db.cfg = { sekolah: c.sekolah || 'Nama Sekolah', tahun: c.tahun || '', walikelas: c.walikelas || '',
         iuran: Number(c.iuran) || 0, watab: c.wa_tab || '', waiuran: c.wa_iuran || '',
         logo: c.logo || '', kepsek: c.kepsek || '', alamat: c.alamat || '', telp: c.telp || '', instansi: c.instansi || '', kepsek_nip: c.kepsek_nip || '', app_nama: c.app_nama || 'SekolahHub',
-        tutup: c.tutup_buku || '', saldomin: Number(c.saldo_min) || 0, limitotor: Number(c.limit_otor) || 0 };
+        tutup: c.tutup_buku || '', saldomin: Number(c.saldo_min) || 0, limitotor: Number(c.limit_otor) || 0, bataspj: c.batas_bendahara == null ? 100000 : Number(c.batas_bendahara) || 0 };
       snapCfg = JSON.stringify(cfgRow(db.cfg));
     },
     // Muat semua tabel secara paralel
@@ -253,6 +265,24 @@
         if (!Data.voteOk) return null;
         return data.map(v => ({ id: v.id, judul: v.judul, open: !!v.open, kand: Array.isArray(v.kand) ? v.kand : [], suara: {}, hitung: v.hitung || {}, total: +v.total || 0, saya: v.saya || '' }));
       } catch (e) { Data.voteOk = false; return null; }
+    },
+    /* Tindakan pengurus kelas (migrasi 020). Semua diperiksa ulang oleh server: jabatan, kelas, tanggal, dan batas jumlah. Pesan galat server diteruskan apa adanya. */
+    pj: {
+      async _(fn, args) {
+        const { data, error } = await sb.rpc(fn, args || {});
+        if (error) throw new Error(/schema cache|PGRST202|Could not find the function/i.test((error.code || '') + ' ' + (error.message || '')) ? 'Fitur pengurus kelas belum aktif. Hubungi admin (migrasi 020).' : error.message);
+        return data;
+      },
+      absensiKelas: tgl => Data.pj._('pj_absensi_kelas', { p_tgl: tgl || null }),
+      absensiSimpan: (tgl, rows) => Data.pj._('pj_absensi_simpan', { p_tgl: tgl, p_rows: rows }),
+      absensiRekap: bulan => Data.pj._('pj_absensi_rekap', { p_bulan: bulan || null }),
+      iuranKelas: minggu => Data.pj._('pj_iuran_kelas', { p_minggu: minggu || null }),
+      iuranCatat: (sid, minggu, jml) => Data.pj._('pj_iuran_catat', { p_sid: sid, p_minggu: minggu, p_jml: jml }),
+      iuranBatal: id => Data.pj._('pj_iuran_batal', { p_id: id }),
+      kasCatat: (jenis, jml, ket) => Data.pj._('pj_kas_catat', { p_jenis: jenis, p_jml: jml, p_ket: ket }),
+      kasBatal: id => Data.pj._('pj_kas_batal', { p_id: id }),
+      infoSimpan: (jenis, id, tgl, judul, isi) => Data.pj._('pj_info_simpan', { p_jenis: jenis, p_id: id || null, p_tgl: tgl || null, p_judul: judul, p_isi: isi || '' }),
+      infoHapus: (jenis, id) => Data.pj._('pj_info_hapus', { p_jenis: jenis, p_id: id })
     },
     // Beri suara atas nama akun yang sedang login. Siapa pemilihnya ditentukan server dari sesi, bukan dari kiriman aplikasi.
     async beriSuara(id, kand) {
@@ -335,16 +365,20 @@
     // Manajemen pengguna (hanya admin yang lolos RLS)
     akunExt: false,
     async users() {
-      let r = await sb.from('profiles').select('id,email,role,created_at,klaim_jenis,klaim_nis,disetujui_pada').order('created_at');
+      let r = await sb.from('profiles').select('id,email,role,created_at,klaim_jenis,klaim_nis,disetujui_pada,jabatan').order('created_at');
+      Data.jabatanOk = !r.error;   // migrasi 020 sudah dijalankan?
+      if (r.error) r = await sb.from('profiles').select('id,email,role,created_at,klaim_jenis,klaim_nis,disetujui_pada').order('created_at');
       Data.akunExt = !r.error;   // migrasi 010 sudah dijalankan?
       if (r.error) r = await sb.from('profiles').select('id,email,role,created_at').order('created_at');
       if (r.error) throw r.error;
       return r.data;
     },
     /* Setujui / ubah peran / cabut akses + tautan siswa dalam satu transaksi (fungsi approve_account, migrasi 010). */
-    async approve(id, role, sids) {
-      sids = sids || [];
-      const { error } = await sb.rpc('approve_account', { p_uid: id, p_role: role, p_sids: sids });
+    async approve(id, role, sids, jabatan) {
+      sids = sids || []; jabatan = jabatan || [];
+      let { error } = await sb.rpc('approve_account', jabatan.length || Data.jabatanOk ? { p_uid: id, p_role: role, p_sids: sids, p_jabatan: jabatan } : { p_uid: id, p_role: role, p_sids: sids });
+      if (error && !jabatan.length && /p_jabatan|schema cache|PGRST202/i.test((error.code || '') + ' ' + (error.message || ''))) ({ error } = await sb.rpc('approve_account', { p_uid: id, p_role: role, p_sids: sids }));   // sebelum migrasi 020
+      if (error && jabatan.length && /p_jabatan|schema cache|PGRST202/i.test((error.code || '') + ' ' + (error.message || ''))) throw new Error('Jabatan pengurus kelas membutuhkan migrasi 020 di Supabase. Lihat README.');
       if (!error) return;
       if (/approve_account|schema cache|PGRST202/i.test((error.code || '') + ' ' + (error.message || ''))) {
         if (role === 'siswa') throw new Error('Peran Siswa membutuhkan migrasi 010 di Supabase. Lihat README.');

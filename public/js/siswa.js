@@ -217,9 +217,10 @@ ${g('Orang tua', f('Ayah', s.ayah) + f('Ibu', s.ibu) + f('Pekerjaan', s.pkj))}${
   }
 
   const dateChip = a => { const d = dayOf(a.tgl); return `<div class='swd'><b>${d.getDate()}</b><span>${BL[d.getMonth()]}</span></div>` };
+  const src = a => a.sumber ? ` <span class='tag'>Dari ${esc(a.sumber)}</span>` : '';   // v2.23: dibuat oleh pengurus kelas
   function agenda() {
     const l = db.agenda.slice().sort((a, b) => a.tgl.localeCompare(b.tgl)), up = l.filter(a => a.tgl >= today()), past = l.filter(a => a.tgl < today()).reverse();
-    const it = a => `<div class='swi'>${dateChip(a)}<div><b>${esc(a.judul)}</b> ${a.tgl == today() ? "<span class='tag'>Hari ini</span>" : ''}<div class='lab'>${fd(a.tgl)}${a.ket ? ' · ' + esc(a.ket) : ''}</div></div></div>`;
+    const it = a => `<div class='swi'>${dateChip(a)}<div><b>${esc(a.judul)}</b> ${a.tgl == today() ? "<span class='tag'>Hari ini</span>" : ''}${src(a)}<div class='lab'>${fd(a.tgl)}${a.ket ? ' · ' + esc(a.ket) : ''}</div></div></div>`;
     return head('Agenda', 'Jadwal kegiatan kelas dan sekolah.')
       + `<div class='card' style='margin-bottom:14px'><h3>Mendatang</h3>${up.length ? up.map(it).join('') : empty('Belum ada agenda mendatang.')}</div>`
       + (past.length ? `<div class='card'><h3>Sudah lewat</h3>${past.slice(0, 20).map(it).join('')}</div>` : '');
@@ -227,7 +228,7 @@ ${g('Orang tua', f('Ayah', s.ayah) + f('Ibu', s.ibu) + f('Pekerjaan', s.pkj))}${
   function pengumuman() {
     const l = db.info.slice().sort((a, b) => b.tgl.localeCompare(a.tgl));
     return head('Pengumuman', 'Informasi untuk siswa dan wali murid.')
-      + `<div class='card'>${l.length ? l.map(a => `<div class='swi'>${dateChip(a)}<div><b>${esc(a.judul)}</b><div class='lab'>${fd(a.tgl)}</div><div class='swi-t'>${esc(a.isi)}</div></div></div>`).join('') : empty('Belum ada pengumuman.')}</div>`;
+      + `<div class='card'>${l.length ? l.map(a => `<div class='swi'>${dateChip(a)}<div><b>${esc(a.judul)}</b>${src(a)}<div class='lab'>${fd(a.tgl)}</div><div class='swi-t'>${esc(a.isi)}</div></div></div>`).join('') : empty('Belum ada pengumuman.')}</div>`;
   }
 
   /* Voting per akun: siswa memilih sendiri; server (beri_suara) menentukan pemilih dari sesi login.

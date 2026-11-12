@@ -32,7 +32,7 @@
     const r = Data.role, em = Data.user && Data.user.email || '', kids = db.siswa || [];
     const nama = r == 'siswa' && kids[0] ? kids[0].nama : (em.split('@')[0] || 'Akun');
     const ini = String(nama).trim().charAt(0).toUpperCase() || '?';
-    return `<div class='card aks-hero'><div class='aks-av' aria-hidden='true'>${E(ini)}</div><div class='aks-id'><b>${E(nama)}</b><span class='mu'>${E(em)}</span></div><span class='aks-role'>${E((ROLEL && ROLEL[r]) || r)}</span></div>`;
+    return `<div class='card aks-hero'><div class='aks-av' aria-hidden='true'>${E(ini)}</div><div class='aks-id'><b>${E(nama)}</b><span class='mu'>${E(em)}</span></div><span class='aks-role'>${E((ROLEL && ROLEL[r]) || r)}${r == 'siswa' && Data.jabatan && Data.jabatan.length ? ' · ' + E(Data.jabatan.map(j => JABL[j] || j).join(' & ')) : ''}</span></div>`;
   }
   function profil() {
     const r = Data.role, kids = db.siswa || [];
@@ -40,7 +40,7 @@
     if (r == 'siswa' && kids[0]) h += kv('Nama siswa', E(kids[0].nama)) + kv('Kelas', E(kids[0].kelas)) + kv('NIS', E(kids[0].nis));
     else if (r == 'ortu' && kids.length) h += kv('Anak yang ditautkan', kids.map(s => E(s.nama) + ' (' + E(s.kelas) + ')').join('<br>'));
     else h += `<p class='aks-note'>Akun ini belum ditautkan ke data siswa. Hubungi ${db.cfg.walikelas ? 'wali kelas (' + E(db.cfg.walikelas) + ')' : 'wali kelas'} atau admin sekolah.</p>`;
-    return sec('user', 'Profil akun', 'Data siswa hanya dapat diubah oleh wali kelas atau admin.', h + `<p class='aks-note'>${E(AKSES[r] || '')}</p>`);
+    return sec('user', 'Profil akun', 'Data siswa hanya dapat diubah oleh wali kelas atau admin.', h + `<p class='aks-note'>${E(AKSES[r] || '')}${r == 'siswa' && Data.pejabat() ? ' Sebagai ' + E(Data.jabatan.map(j => JABL[j]).join(' & ')) + ' kelas, Anda juga mendapat wewenang terbatas pada kelas Anda (menu Tugas Kelas).' : ''}</p>`);
   }
   const keamanan = () => sec('lock', 'Keamanan', 'Jaga akun tetap aman, terutama di perangkat bersama.',
     `<div class='pbar'><button type='button' onclick='A.sandi()'>Ganti kata sandi</button><button type='button' onclick='AKS.semua()'>Keluar dari semua perangkat</button><button type='button' class='d' onclick='Data.logout()'>Keluar</button></div>`
