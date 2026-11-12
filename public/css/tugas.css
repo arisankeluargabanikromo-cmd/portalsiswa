@@ -1,0 +1,161 @@
+/* SekolahHub: halaman Tugas Kelas (js/tugas.js, v2.24). Hanya memakai token tema (terang/gelap); kelas berawalan "tg". Titik henti 860px sama dengan mobile.css.
+   Susunan: daftar siswa/catatan di kiri, panel ringkasan di kanan (desktop); satu kolom dengan ringkasan di atas (ponsel). */
+
+/* ---------- Kepala halaman ---------- */
+.tgh{display:flex;align-items:flex-end;justify-content:space-between;gap:12px 24px;flex-wrap:wrap;margin:0 0 6px}
+.tgh h2{margin:0}
+.tgh .sub{margin:2px 0 0}
+.tgh-c{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tgk-c,.tgk-j{display:inline-flex;align-items:center;height:28px;padding:0 12px;border-radius:999px;font-size:13px;font-weight:700;letter-spacing:0}
+.tgk-c{background:var(--w1);border:1px solid var(--br);color:var(--tx)}
+.tgk-j{color:#fff;background:var(--pr)}
+.tgk-j.sekretaris{background:var(--inf)}
+.tgk-j.bendahara{background:var(--ac);color:#2a1a00}
+.tgh-w{min-height:0;height:28px;padding:0 4px;border:0;background:none;box-shadow:none;color:var(--pr);font-size:13px;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+
+/* ---------- Tab (garis bawah, bisa digeser di ponsel) ---------- */
+.tgt{display:flex;gap:2px;margin:14px 0 18px;border-bottom:1px solid var(--br);overflow-x:auto;scrollbar-width:none}
+.tgt::-webkit-scrollbar{display:none}
+.tgt button{flex:none;min-height:46px;padding:0 18px;border:0;border-radius:0;background:none;box-shadow:none;font-size:14.5px;font-weight:600;color:var(--mu);cursor:pointer;white-space:nowrap;transition:color .15s,box-shadow .15s}
+.tgt button:hover{color:var(--tx)}
+.tgt button[aria-selected="true"]{color:var(--pr);box-shadow:inset 0 -3px 0 var(--pr)}
+.tgt button:focus-visible,.tgx button:focus-visible,.tgx input:focus-visible,.tgv button:focus-visible{outline:3px solid color-mix(in srgb,var(--pr) 55%,transparent);outline-offset:2px}
+
+/* ---------- Susunan dua kolom ---------- */
+.tgx{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+.tgx-r{grid-template-columns:340px minmax(0,1fr)}
+.tgx-r .tgx-s{order:-1}
+.tgx-s{display:flex;flex-direction:column;gap:14px;position:sticky;top:84px}
+.tgm,.tgs-c,.tgc{margin:0;padding:0;overflow:hidden}
+.tgs-c{padding:18px;overflow:visible}
+.tgs-c h3,.tgm-h{margin:0 0 12px;font-size:15px;font-weight:700}
+.tgm-h{padding:16px 18px 0;margin:0 0 4px}
+.tgc{margin:0 0 14px}
+.tgh-n{margin:10px 0 0;font-size:12.5px;line-height:1.5;color:var(--mu)}
+
+/* ---------- Angka utama dan progres ---------- */
+.tgbig{display:flex;flex-direction:column;gap:2px;margin:0 0 12px}
+.tgbig small{font-size:13px;color:var(--mu)}
+.tgbig b{font-size:30px;font-weight:800;line-height:1.15;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.tgbig span{font-size:13px;color:var(--mu)}
+.tgbar{height:8px;border-radius:999px;background:var(--br);overflow:hidden}
+.tgbar span{display:block;height:100%;border-radius:999px;background:var(--pr);transition:width .35s ease}
+.tgp-n{margin:12px 0 8px;font-size:13.5px;color:var(--mu)}
+.tgp-n b{color:var(--tx);font-size:15px}
+
+/* ---------- Baris (siswa / catatan) ---------- */
+.tgr{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px 12px;padding:10px 18px;border-top:1px solid var(--br);min-height:60px;transition:box-shadow .15s}
+.tgr:first-child{border-top:0}
+.tgr[data-st="H"]{box-shadow:inset 3px 0 var(--ok)}.tgr[data-st="S"]{box-shadow:inset 3px 0 var(--inf)}.tgr[data-st="I"]{box-shadow:inset 3px 0 var(--ac)}.tgr[data-st="A"]{box-shadow:inset 3px 0 var(--er)}
+.tgav{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:color-mix(in srgb,var(--pr) 14%,transparent);color:var(--pr);font-size:13px;font-weight:700}
+.tgn{min-width:0;font-weight:600;overflow-wrap:anywhere}
+.tgn small{display:block;margin-top:1px;font-size:12.5px;font-weight:500;color:var(--mu)}
+.tgst{font-weight:600!important}
+.tgst.ok{color:var(--ok)}.tgst.wn{color:var(--ac)}.tgst.nl{color:var(--mu)}
+.tga{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.tg-up{color:var(--ok)}.tg-dn{color:var(--er)}
+.tga b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tgic{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;font-size:13px;font-weight:700}
+.tgic.in{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.tgic.out{background:color-mix(in srgb,var(--er) 13%,transparent);color:var(--er)}
+
+/* ---------- Kontrol status absensi: satu segmen per siswa ---------- */
+.tgseg{display:inline-grid;grid-template-columns:repeat(4,auto);border:1px solid var(--br);border-radius:12px;overflow:hidden;background:var(--w1)}
+.tgseg button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;min-width:44px;padding:0 12px;border:0;border-left:1px solid var(--br);border-radius:0;background:none;box-shadow:none;font-size:13px;font-weight:600;color:var(--mu);cursor:pointer;transition:background .12s,color .12s}
+.tgseg button:first-child{border-left:0}
+.tgseg button b{font-weight:800}
+.tgseg button span{display:none}
+.tgseg button:hover{background:color-mix(in srgb,var(--pr) 8%,transparent);color:var(--tx)}
+.tgseg button.on{color:#fff}
+.tgseg button.on.H{background:var(--ok)}.tgseg button.on.S{background:var(--inf)}.tgseg button.on.I{background:var(--ac);color:#2a1a00}.tgseg button.on.A{background:var(--er)}
+@media (min-width:1100px){.tgseg button span{display:inline}.tgseg button b{display:none}}
+
+/* ---------- Ringkasan status ---------- */
+.tgl{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+.tgl li{display:flex;align-items:center;gap:10px;font-size:13.5px}
+.tgl li i{width:10px;height:10px;border-radius:50%;flex:none}
+.tgl li i.nil{background:none;border:2px solid var(--br)}
+.tgl li b{margin-left:auto;font-variant-numeric:tabular-nums}
+.tgx-a{display:grid;gap:8px;margin-top:16px}
+.tgx-a button,.tgsv{min-height:44px;width:100%;border-radius:12px;font-weight:700}
+.tgln{min-height:0!important;width:auto!important;padding:4px 2px!important;border:0!important;background:none!important;box-shadow:none!important;color:var(--pr);font-size:13px;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.tgln.dng{color:var(--er)}
+.tgln:disabled{color:var(--mu);text-decoration:none;opacity:.5;cursor:default}
+.tgb2{min-height:36px;padding:0 14px;border-radius:10px;font-size:13px;font-weight:700}
+
+/* ---------- Tanggal, minggu, filter, formulir ---------- */
+.tgd{display:block;margin:0}
+.tgwk{display:flex;align-items:center;gap:10px;margin:0 0 16px;padding:0 0 14px;border-bottom:1px solid var(--br)}
+.tgwk>div{flex:1;min-width:0;text-align:center;line-height:1.35}
+.tgwk b{display:block;font-size:14px}
+.tgwk small{color:var(--mu);font-size:12px}
+.tgwk button{flex:none;width:40px;min-height:40px;padding:0;border-radius:12px;font-size:20px;line-height:1}
+.tgfc{display:flex;gap:8px;flex-wrap:wrap;padding:14px 18px}
+.tgfc button{min-height:36px;padding:0 14px;border:1px solid var(--br);border-radius:999px;background:var(--w1);box-shadow:none;font-size:13px;font-weight:600;color:var(--mu);cursor:pointer}
+.tgfc button b{margin-left:2px;font-variant-numeric:tabular-nums}
+.tgfc button.on{background:var(--pr);border-color:var(--pr);color:#fff}
+.tgsg{display:grid;grid-template-columns:1fr 1fr;padding:4px;margin:0 0 14px;border:1px solid var(--br);border-radius:12px;background:var(--w1)}
+.tgsg button{min-height:40px;border:0;border-radius:9px;background:none;box-shadow:none;font-size:13.5px;font-weight:600;color:var(--mu);cursor:pointer}
+.tgsg button.on{background:var(--pr);color:#fff}
+.tgs-c label{display:block;margin:0 0 12px}
+.tgs-c textarea{width:100%;resize:vertical;min-height:96px}
+.tgrp{display:flex;align-items:stretch}
+.tgrp span{display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--br);border-right:0;border-radius:12px 0 0 12px;background:var(--w1);color:var(--mu);font-weight:600}
+.tgrp input{flex:1;min-width:0;border-radius:0 12px 12px 0}
+.tglm{margin:0 0 12px}
+.tglm div:first-child{display:flex;justify-content:space-between;gap:8px;margin:0 0 6px;font-size:13px;color:var(--mu)}
+.tglm b{color:var(--tx);font-variant-numeric:tabular-nums}
+.tglm small{font-weight:500;color:var(--mu)}
+
+/* ---------- Rekap bulanan ---------- */
+.tgrk{margin:20px 0 0}
+.tgrk>summary{padding:16px 18px;cursor:pointer;font-weight:700}
+.tgrk .tw{padding:0 18px 12px}
+.tgk{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+.tgk th,.tgk td{padding:9px 10px;border-bottom:1px solid var(--br);text-align:center}
+.tgk th{font-size:12.5px;font-weight:600;color:var(--mu)}
+.tgk th:first-child,.tgk td:first-child{text-align:left}
+.tgk td.tgA{color:var(--er);font-weight:700}
+
+/* ---------- Dialog wewenang ---------- */
+.tgw-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:8px 0 12px}
+.tgw-g h4{margin:0 0 6px;font-size:14px;font-weight:700}
+.tgw-g ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.55}
+
+/* ---------- Bar simpan ponsel (di atas navigasi bawah); tersembunyi di desktop ---------- */
+.tgv{display:none}
+
+@media screen and (max-width:860px){
+  .tgx,.tgx-r{grid-template-columns:1fr;gap:14px}
+  .tgx-s{position:static;order:-1}
+  .tgh h2{display:none}   /* judul sudah ada di bilah atas */
+  .tgh-c{width:100%}
+  .tgl{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px}
+  .tgl li b{margin-left:2px}
+  .tgs-c{padding:16px}
+  .tgt{margin:10px -16px 14px;padding:0 8px}
+  .tgr{grid-template-columns:auto minmax(0,1fr);padding:12px 14px}
+  .tgr .tgseg{grid-column:1/-1;display:grid;width:100%}
+  .tgr .tgseg button{min-height:46px}
+  .tgr .tgseg button span{display:inline}.tgr .tgseg button b{display:none}
+  .tgr .tga{grid-column:2;justify-content:flex-start}
+  .tgr-k .tga,.tgr-i .tga{grid-column:auto}
+  .tgr-i{grid-template-columns:auto minmax(0,1fr) auto}
+  .tgh-n.x{display:none}
+  .tgr-k{grid-template-columns:auto minmax(0,1fr) auto}
+  .tgr-k .tga{flex-direction:column;align-items:flex-end;gap:2px}
+  .tgfc{padding:12px 14px}
+  .tgx-a .tgsv{display:none}
+  .tgv{display:flex;align-items:center;justify-content:space-between;gap:12px;position:fixed;left:0;right:0;bottom:calc(var(--nv) + env(safe-area-inset-bottom,0px));z-index:25;padding:10px 16px;background:var(--s2);border-top:1px solid var(--br);box-shadow:0 -8px 18px -12px rgb(0 0 0/.3)}
+  .tgv span{font-size:13px;color:var(--mu)}
+  .tgv .tgsv{width:auto;min-width:150px}
+  .tgrk{margin-bottom:76px}
+  .tgw-g{grid-template-columns:1fr}
+  .tgbig b{font-size:28px}
+}
+@media (prefers-reduced-motion:reduce){.tgbar span,.tgr,.tgt button,.tgseg button{transition:none}}
+@media print{.tgt,.tgv,.tgx-a,.tgfc,.tgh-w{display:none!important}.tgx{grid-template-columns:1fr}}
+
+/* Akun Siswa berada di mode hanya-baca (body.ro) yang menyembunyikan tombol di .acts. Dialog Tugas Kelas memang harus bisa dikonfirmasi
+   (server tetap memeriksa jabatan), jadi tombolnya dimunculkan kembali. */
+.ro #dlg .acts button#tjo,.ro #dlg .acts button#x{display:inline-flex!important}
