@@ -1,5 +1,7 @@
 # SekolahHub
 
+> **v2.25.0:** **Lupa kata sandi** lewat email (layar masuk → *Lupa kata sandi?*). Tanpa migrasi SQL, tetapi **wajib** mengaktifkan SMTP kustom dan mendaftarkan Redirect URL di Supabase, kalau tidak email tidak sampai ke siswa dan orang tua. Rincian dan langkah: `CHANGELOG_2.25.0.md`.
+
 > **v2.23.0:** hak akses **Ketua, Sekretaris, Bendahara** kelas (akun Siswa + jabatan, menu *Tugas Kelas*, wewenang terbatas dan diperiksa server). **Wajib** menjalankan migrasi `020_pengurus_kelas.sql`; belum diuji di Postgres, coba di staging dulu. Rincian: `CHANGELOG_2.23.0.md`.
 
 > **v2.22.0:** akun Orang tua memakai tampilan yang sama dengan akun Siswa (pemilih anak bila lebih dari satu anak; voting hanya-lihat). **Wajib** menjalankan migrasi `019_portal_ortu_setara_siswa.sql`. Rincian: `CHANGELOG_2.22.0.md`.
@@ -270,6 +272,9 @@ Catatan teknis:
 - Pembaca .xlsx ditulis di atas `fflate` (disertakan di `public/vendor/`, lisensi MIT) tanpa SheetJS, dan hanya membaca nilai tersimpan: formula dan makro tidak dijalankan. Tanggal Excel (termasuk sistem 1904), angka berformat Indonesia (`Rp 1.250.000`), CSV dengan pemisah `,` `;` atau tab, dan encoding Windows-1252 didukung. Format lama **.xls tidak didukung**; simpan ulang sebagai .xlsx.
 - Penarikan tabungan dikirim berurutan menurut tanggal (setoran lebih dulu pada hari yang sama) agar lolos penjaga saldo di server (`guard_saldo`).
 - Urungkan hanya tersedia di layar hasil impor. Setelah dialog ditutup, gunakan cadangan (*Pengaturan > Data*) bila perlu mengembalikan data.
+
+## Lupa kata sandi (v2.25)
+Pengguna mengklik **Lupa kata sandi?** di layar masuk, memasukkan email, lalu membuka tautan yang dikirim untuk membuat kata sandi baru. Sesi di perangkat lain dicabut setelah sandi diganti. **Prasyarat di Supabase:** (1) SMTP kustom (layanan bawaan hanya mengirim ke anggota tim proyek dan sekitar 2 email/jam), (2) *Authentication → URL Configuration*: Site URL dan Redirect URLs berisi alamat aplikasi, (3) opsional template email `supabase/email-templates/reset-password.html`. Langkah dan penanganan kasus khusus ada di `CHANGELOG_2.25.0.md`.
 
 ## Layar masuk
 
