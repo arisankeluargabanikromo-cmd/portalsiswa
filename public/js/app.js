@@ -448,6 +448,9 @@ async function start(){
 async function boot(){
   const done=()=>window.hideSplash&&hideSplash();
   try{await Data.init()}catch(e){const a=$('#auth');a.hidden=false;a.innerHTML=`<div class='card'><h1>Konfigurasi belum lengkap</h1><p class='lab'>${esc(e.message)}</p></div>`;done();return}
-  if(!Data.user||Data.role=='pending'){await Brand.ready(1200);authScreen(Data.user?'pending':'login');done();return}
+  /* v2.25: masuk lewat tautan reset kata sandi -> wajib menetapkan sandi baru dulu, sebelum data dibuka (juga sebelum layar "menunggu persetujuan") */
+  if(Data.recovery&&!Data.user)Data.endRecovery();   // penanda usang / tautan tidak menghasilkan sesi
+  if(Data.recovery){await Brand.ready(1200);authScreen('baru');done();return}
+  if(!Data.user||Data.role=='pending'){await Brand.ready(1200);authScreen(Data.user?'pending':(Data.linkError?'lupa':'login'));done();return}
   start().catch(e=>{done();const a=$('#auth');a.hidden=false;a.innerHTML=`<div class='card' style='max-width:420px;margin:12vh auto;padding:24px'><h1>Gagal memuat data</h1><p class='lab'>${esc(e.message||'Terjadi kesalahan jaringan.')}</p><div class='acts'><button class='p' id='rt' type='button'>Coba lagi</button><button id='ro' type='button'>Keluar</button></div></div>`;$('#rt').onclick=()=>location.reload();$('#ro').onclick=()=>Data.logout()})}
 document.readyState=='loading'?document.addEventListener('DOMContentLoaded',boot):boot();

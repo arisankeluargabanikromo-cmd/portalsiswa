@@ -26,12 +26,28 @@
     if (/invalid login|salah/i.test(m)) return 'Email atau kata sandi salah.';
     if (/not confirmed/i.test(m)) return 'Email belum dikonfirmasi. Periksa kotak masuk Anda.';
     if (/already registered|already been registered/i.test(m)) return 'Email ini sudah terdaftar. Silakan masuk.';
-    if (/rate limit|too many|security purposes/i.test(m)) return 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.';
+    if (/rate limit|too many|security purposes/i.test(m)) return 'Terlalu banyak percobaan. Tunggu beberapa menit, lalu coba lagi.';
     if (/failed to fetch|network|load failed/i.test(m)) return 'Tidak dapat terhubung. Periksa koneksi internet Anda.';
+    if (/different from the old|same as the old/i.test(m)) return 'Kata sandi baru harus berbeda dari yang lama.';
     if (/password should|weak/i.test(m)) return 'Kata sandi terlalu lemah. Gunakan minimal 6 karakter.';
     if (/signups? not allowed|disabled/i.test(m)) return 'Pendaftaran akun baru sedang dinonaktifkan.';
     return m || 'Terjadi kesalahan. Coba lagi.';
   };
+  let sentTo = '', cdUntil = 0, cdTimer = 0;   // v2.25 lupa sandi: email tujuan, batas waktu kirim ulang, pencacah mundur
+  const MAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  /* Pembantu form untuk layar lupa/sandi baru: pesan galat, penanda kolom salah, status tombol sibuk */
+  function formUi(label) {
+    const err = $('#aerr'), sb = $('#sb');
+    const note = (t, ok) => { err.textContent = t || ''; err.classList.toggle('ok', !!ok) };
+    return {
+      note,
+      fail: (t, el) => { note(t); if (el) { el.setAttribute('aria-invalid', 'true'); el.focus() } },
+      busy: b => { sb.disabled = b; sb.classList.toggle('busy', b); sb.querySelector('.lb').textContent = b ? 'Memproses…' : label }
+    };
+  }
+  /* Kolom sandi dengan tombol mata (dipakai layar sandi baru) */
+  const pwField = (id, label, ph, eye) => `<div class='af'><label for='${id}'>${label}</label><div class='afi pw'>${P(IC.lock)}<input id='${id}' type='password' autocomplete='new-password' placeholder='${ph}' required>`
+    + (eye ? `<button type='button' class='eye' id='ey' aria-label='Tampilkan kata sandi' aria-pressed='false'>${P(IC.eye)}</button>` : '') + `</div></div>`;
   let tab = 'login', mail = '', kj = 'siswa', nisv = '';   // kj/nisv: klaim saat mendaftar (hanya saran untuk admin)
 
   function logoTile(bc, n) {
@@ -95,19 +111,111 @@
       Theme.refresh(); refreshBrand(); $('#re').onclick = () => location.reload(); $('#lo').onclick = () => Data.logout(); return;
     }
 
+    clearTimeout(cdTimer);
+
+    /* ----- Lupa kata sandi: minta tautan lewat email (v2.25) ----- */
+    if (mode == 'lupa') {
+      if (!msg) { const le = Data.consumeLinkError && Data.consumeLinkError(); if (le) msg = le }
+      a.innerHTML = shell(`<div class='afc'><div class='afh0 plain'><h1>Lupa kata sandi?</h1><p class='afs'>Masukkan email akun Anda. Kami akan mengirim tautan untuk membuat kata sandi baru.</p></div>`
+        + `<form id='af' novalidate><div class='afbd'>`
+        + `<div class='af'><label for='em'>Email</label><div class='afi'>${P(IC.mail)}<input id='em' type='email' inputmode='email' autocomplete='username' autocapitalize='off' spellcheck='false' placeholder='nama@email.com' value='${esc(mail)}' required></div></div>`
+        + `<div id='aerr' class='amsg' role='alert' aria-live='polite'></div>`
+        + `<button class='p afb' id='sb' type='submit'><span class='lb'>Kirim tautan reset</span></button>`
+        + `<button class='afb afg' id='bk' type='button'>Kembali ke halaman masuk</button></div></form>`
+        + `<p class='afn'>Tidak menerima email? Periksa folder spam atau promosi. Bila email akun sudah tidak aktif, hubungi admin sekolah.</p></div>`, bc);
+      Theme.refresh(); refreshBrand();
+      const em = $('#em'), ui = formUi('Kirim tautan reset');
+      if (msg) ui.note(msg.t || msg, !!msg.ok);
+      em.addEventListener('input', () => { em.removeAttribute('aria-invalid'); ui.note('') });
+      $('#bk').onclick = () => { mail = em.value.trim(); tab = 'login'; authScreen('login') };
+      $('#af').onsubmit = async ev => {
+        ev.preventDefault();
+        const e = em.value.trim();
+        if (!MAIL_OK.test(e)) return ui.fail('Masukkan alamat email yang valid.', em);
+        ui.note(''); ui.busy(true);
+        try { await Data.forgot(e); mail = sentTo = e; cdUntil = Date.now() + 60000; authScreen('terkirim') }
+        catch (x) { ui.busy(false); ui.fail(friendly(x.message)) }
+      };
+      if (matchMedia('(pointer:fine)').matches) em.focus();
+      return;
+    }
+
+    /* ----- Email terkirim ----- */
+    if (mode == 'terkirim') {
+      a.innerHTML = shell(`<div class='afc mid'><span class='aic'>${P(IC.mail, 28)}</span><h1>Periksa email Anda</h1>`
+        + `<p class='afs'>Jika alamat berikut terdaftar, tautan untuk membuat kata sandi baru sudah dikirim.</p>`
+        + `<div class='aem'>${P(IC.mail, 16)}<span>${esc(sentTo)}</span></div>`
+        + `<p class='afs'>Tautan hanya berlaku sementara dan hanya bisa dipakai sekali. Buka tautannya, lalu ikuti petunjuk di layar.</p>`
+        + `<div id='aerr' class='amsg' role='status' aria-live='polite' style='margin-top:14px'></div>`
+        + `<button class='p afb' id='rs' type='button'>Kirim ulang tautan</button><button class='afb afg' id='bk' type='button'>Kembali ke halaman masuk</button>`
+        + `<p class='afn'>Belum masuk juga? Periksa folder spam. Bila alamat email salah ketik, kembali lalu masukkan ulang.</p></div>`, bc);
+      Theme.refresh(); refreshBrand();
+      const rs = $('#rs'), ui = formUi('');
+      const tick = () => {
+        if (!rs.isConnected) return;
+        const sec = Math.ceil((cdUntil - Date.now()) / 1000);
+        rs.disabled = sec > 0; rs.textContent = sec > 0 ? `Kirim ulang tautan (${sec} dtk)` : 'Kirim ulang tautan';
+        if (sec > 0) cdTimer = setTimeout(tick, 500);
+      };
+      tick();
+      rs.onclick = async () => {
+        rs.disabled = true; ui.note('');
+        try { await Data.forgot(sentTo); cdUntil = Date.now() + 60000; ui.note('Tautan baru sudah dikirim.', true) }
+        catch (x) { ui.note(friendly(x.message)) }
+        clearTimeout(cdTimer); tick();
+      };
+      $('#bk').onclick = () => { tab = 'login'; authScreen('login') };
+      return;
+    }
+
+    /* ----- Kata sandi baru: setelah membuka tautan reset dari email ----- */
+    if (mode == 'baru') {
+      a.innerHTML = shell(`<div class='afc'><div class='afh0 plain'><h1>Buat kata sandi baru</h1><p class='afs'>Pilih kata sandi baru untuk akun <b>${esc(Data.user.email)}</b>.</p></div>`
+        + `<form id='af' novalidate><div class='afbd'>`
+        + pwField('pw', 'Kata sandi baru', 'Minimal 6 karakter', true) + pwField('pw2', 'Ulangi kata sandi baru', 'Ketik ulang kata sandi', false)
+        + `<div id='aerr' class='amsg' role='alert' aria-live='polite'></div>`
+        + `<button class='p afb' id='sb' type='submit'><span class='lb'>Simpan kata sandi</span></button>`
+        + `<button class='afb afg' id='bk' type='button'>Batal</button></div></form>`
+        + `<p class='afn'>Setelah disimpan, perangkat lain yang masih masuk dengan akun ini akan diminta masuk ulang.</p></div>`, bc);
+      Theme.refresh(); refreshBrand();
+      const pw = $('#pw'), pw2 = $('#pw2'), ui = formUi('Simpan kata sandi');
+      [pw, pw2].forEach(el => el.addEventListener('input', () => { el.removeAttribute('aria-invalid'); ui.note('') }));
+      $('#ey').onclick = () => {
+        const show = pw.type == 'password'; pw.type = pw2.type = show ? 'text' : 'password';
+        $('#ey').innerHTML = P(show ? IC.eyeoff : IC.eye); $('#ey').setAttribute('aria-pressed', show); $('#ey').setAttribute('aria-label', show ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi');
+      };
+      $('#bk').onclick = () => Data.cancelRecovery();
+      $('#af').onsubmit = async ev => {
+        ev.preventDefault();
+        if (pw.value.length < 6) return ui.fail('Kata sandi minimal 6 karakter.', pw);
+        if (pw.value !== pw2.value) return ui.fail('Kata sandi tidak sama.', pw2);
+        ui.note(''); ui.busy(true);
+        try { await Data.setNewPassword(pw.value) }
+        catch (x) {
+          ui.busy(false);
+          if (/session|jwt|token/i.test(x.message || '')) { Data.endRecovery(); mail = Data.user.email; return authScreen('lupa', 'Sesi pemulihan sudah berakhir. Minta tautan reset baru.') }
+          return ui.fail(friendly(x.message));
+        }
+        if (window.toast) toast('Kata sandi berhasil diubah.');
+        boot();
+      };
+      if (matchMedia('(pointer:fine)').matches) pw.focus();
+      return;
+    }
+
     /* ----- Masuk / Daftar ----- */
     const reg = tab == 'daftar';
     a.innerHTML = shell(`<div class='afc'><div class='afh0'><h1>${reg ? 'Buat akun baru' : 'Selamat datang kembali'}</h1><p class='afs'>${reg ? 'Daftar lalu tunggu persetujuan admin.' : 'Masuk untuk mengelola tabungan dan data kelas.'}</p>`
       + `<div class='aseg' role='tablist' aria-label='Masuk atau daftar'><button type='button' role='tab' data-tab='login' aria-selected='${!reg}'>Masuk</button><button type='button' role='tab' data-tab='daftar' aria-selected='${reg}'>Daftar</button></div></div>`
       + `<form id='af' novalidate><div class='afbd'>`
       + `<div class='af'><label for='em'>Email</label><div class='afi'>${P(IC.mail)}<input id='em' type='email' inputmode='email' autocomplete='username' autocapitalize='off' spellcheck='false' placeholder='nama@email.com' value='${esc(mail)}' required></div></div>`
-      + `<div class='af'><label for='pw'>Kata sandi</label><div class='afi pw'>${P(IC.lock)}<input id='pw' type='password' autocomplete='${reg ? 'new-password' : 'current-password'}' placeholder='Minimal 6 karakter' required><button type='button' class='eye' id='ey' aria-label='Tampilkan kata sandi' aria-pressed='false'>${P(IC.eye)}</button></div><div class='cap' id='cap' role='status'>Caps Lock sedang aktif</div></div>`
+      + `<div class='af'><label for='pw'>Kata sandi</label><div class='afi pw'>${P(IC.lock)}<input id='pw' type='password' autocomplete='${reg ? 'new-password' : 'current-password'}' placeholder='Minimal 6 karakter' required><button type='button' class='eye' id='ey' aria-label='Tampilkan kata sandi' aria-pressed='false'>${P(IC.eye)}</button></div><div class='cap' id='cap' role='status'>Caps Lock sedang aktif</div>${reg ? '' : `<button type='button' class='alk' id='fg'>Lupa kata sandi?</button>`}</div>`
       + (reg ? `<div class='af'><label for='pw2'>Ulangi kata sandi</label><div class='afi pw'>${P(IC.lock)}<input id='pw2' type='password' autocomplete='new-password' placeholder='Ketik ulang kata sandi' required></div></div>` : '')
       + (reg ? `<div class='af'><label id='kjl'>Saya mendaftar sebagai</label><div class='arole' role='radiogroup' aria-labelledby='kjl'>${[['siswa', 'Siswa'], ['ortu', 'Orang tua'], ['staf', 'Guru / staf']].map(k => `<button type='button' role='radio' data-kj='${k[0]}' aria-checked='${kj == k[0]}'>${k[1]}</button>`).join('')}</div></div>`
         + `<div class='af' id='nisw' ${kj == 'staf' ? 'hidden' : ''}><label for='nis' id='nisl'>${kj == 'ortu' ? 'NIS anak' : 'NIS siswa'} <span class='mu'>(opsional)</span></label><div class='afi'>${P(IC.clip)}<input id='nis' type='text' inputmode='numeric' autocomplete='off' maxlength='40' placeholder='Contoh: 2024100' value='${esc(nisv)}'></div><div class='afh'>Membantu admin mencocokkan akun dengan data siswa.</div></div>` : '')
       + `<div id='aerr' class='amsg' role='alert' aria-live='polite'></div>`
       + `<button class='p afb' id='sb' type='submit'><span class='lb'>${reg ? 'Buat akun' : 'Masuk'}</span></button></div></form>`
-      + `<p class='afn'>${reg ? 'Akun baru perlu disetujui admin sebelum dapat membuka data. Akun pertama otomatis menjadi admin.' : 'Belum punya akun? Pilih <b>Daftar</b>. Lupa kata sandi? Hubungi admin sekolah.'}</p></div>`, bc);
+      + `<p class='afn'>${reg ? 'Akun baru perlu disetujui admin sebelum dapat membuka data. Akun pertama otomatis menjadi admin.' : 'Belum punya akun? Pilih <b>Daftar</b>.'}</p></div>`, bc);
     Theme.refresh(); refreshBrand();
 
     const em = $('#em'), pw = $('#pw'), err = $('#aerr'), sb = $('#sb');
@@ -123,6 +231,7 @@
       $('#nisw').hidden = kj == 'staf'; $('#nisl').firstChild.textContent = (kj == 'ortu' ? 'NIS anak' : 'NIS siswa') + ' ';
     } });
     const nin = $('#nis'); if (nin) nin.addEventListener('input', () => { nisv = nin.value });
+    const fg = $('#fg'); if (fg) fg.onclick = () => { mail = em.value.trim(); authScreen('lupa') };
     $('#ey').onclick = () => {
       const show = pw.type == 'password'; pw.type = show ? 'text' : 'password';
       const p2 = $('#pw2'); if (p2) p2.type = pw.type;

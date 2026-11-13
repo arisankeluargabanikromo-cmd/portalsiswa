@@ -9,6 +9,27 @@
   const CFG = window.SH_CONFIG || {};
   let sb = null;
 
+  /* v2.25: Lupa kata sandi.
+     Tautan di email reset membawa token di hash URL (#access_token=...&type=recovery). supabase-js menghapus hash itu saat
+     klien dibuat, sedangkan event PASSWORD_RECOVERY baru dikirim sesudahnya (lewat setTimeout), jadi bisa terlambat dibanding
+     getSession(). Karena itu jenis tautan dibaca dari URL di sini, sebelum klien dibuat. Penanda di sessionStorage menjaga layar
+     "kata sandi baru" tetap tampil bila halaman dimuat ulang sebelum sandi selesai diganti. Tautan kedaluwarsa tidak dibersihkan
+     oleh supabase-js (hash galat tetap di URL), jadi dibersihkan di consumeLinkError(). */
+  const REC_KEY = 'sh.recovery';
+  const parseAuthHash = h => {
+    const p = new URLSearchParams(String(h || '').replace(/^#/, ''));
+    if (p.get('error') || p.get('error_code') || p.get('error_description')) return { kind: 'error', code: p.get('error_code') || p.get('error') || '' };
+    if (p.get('type') === 'recovery' && p.get('access_token')) return { kind: 'recovery' };
+    return { kind: '' };
+  };
+  const recStore = {
+    get() { try { return sessionStorage.getItem(REC_KEY) === '1' } catch (e) { return false } },
+    set(v) { try { v ? sessionStorage.setItem(REC_KEY, '1') : sessionStorage.removeItem(REC_KEY) } catch (e) {} }
+  };
+  const URL0 = parseAuthHash(typeof location !== 'undefined' ? location.hash : '');
+  if (URL0.kind === 'recovery') recStore.set(true);
+  let recovery = URL0.kind === 'recovery' || recStore.get();
+
   // Kolom buku besar (migrasi 013). Dikirim hanya bila migrasi sudah dijalankan (Data.bankOk !== false).
   // ref, rev_of, waktu, petugas: kosong dikirim sebagai NULL (indeks unik pada ref/rev_of). waktu dan petugas dicap ulang oleh server.
   const BANK = ['ref', 'rev_of', 'kanal', 'waktu', 'petugas'], BANKX = new Set([...BANK, 'kat']), NUL = new Set(['ref', 'rev_of', 'waktu', 'petugas']);
@@ -418,6 +439,28 @@
       const { error } = await sb.auth.updateUser({ password });
       if (error) throw error;
     },
+
+    /* ---- v2.25: lupa kata sandi ---- */
+    get recovery() { return recovery },   // true selama pengguna masuk lewat tautan reset dan belum menetapkan sandi baru
+    linkError: URL0.kind === 'error' ? 'Tautan di email sudah kedaluwarsa, sudah dipakai, atau tidak valid. Minta tautan baru.' : '',
+    consumeLinkError() {   // ambil pesan galat tautan sekali saja dan bersihkan hash galat dari URL
+      const m = Data.linkError; Data.linkError = '';
+      if (m) try { history.replaceState(null, '', location.pathname + location.search) } catch (e) {}
+      return m;
+    },
+    resetUrl: () => location.origin + location.pathname.replace(/index(\.html)?$/, ''),   // alamat tujuan tautan; harus terdaftar di Supabase > Authentication > URL Configuration
+    // Selalu berhasil bagi pemanggil bila email tidak terdaftar (Supabase tidak membedakan), sehingga tidak membocorkan siapa yang punya akun.
+    async forgot(email) {
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: Data.resetUrl() });
+      if (error) throw error;
+    },
+    async setNewPassword(password) {
+      await Data.changePassword(password);
+      recovery = false; recStore.set(false);
+      try { await sb.auth.signOut({ scope: 'others' }) } catch (e) {}   // sandi lama mungkin sudah bocor: sesi di perangkat lain dicabut, perangkat ini tetap masuk
+    },
+    endRecovery() { recovery = false; recStore.set(false) },
+    async cancelRecovery() { Data.endRecovery(); await Data.logout() },   // batal: sesi dari tautan tidak boleh dibiarkan masuk tanpa sandi baru
 
     // Preferensi tema per akun (tabel 'preferensi', migrasi 006). Gagal diam-diam bila tabel belum ada.
     async getTema() {
