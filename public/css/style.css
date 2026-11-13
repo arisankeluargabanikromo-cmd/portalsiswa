@@ -509,3 +509,7 @@ dialog.imp{width:min(880px,96vw)}
 .uca{display:flex;justify-content:flex-end}
 @media(max-width:860px){.uc{grid-template-columns:1fr;gap:12px;padding:16px 14px}.uca{justify-content:stretch}.uca button{width:100%}}
 .akb .akc{background:transparent;border:1px solid var(--br)}.akb .akc.ok{border-color:color-mix(in srgb,var(--ok) 45%,transparent)}.akb .akc.wn{border-color:color-mix(in srgb,var(--ac) 45%,transparent)}
+/* v2.25: tautan "Lupa kata sandi?" di layar masuk */
+.alk,.alk:hover{display:block;margin:4px 0 0 auto;min-height:44px;padding:0 4px;border:0;background:transparent;box-shadow:none;font-size:13px;font-weight:600;color:var(--pr)}
+.alk:hover{text-decoration:underline}
+.afh0.plain{margin-bottom:20px}   /* tanpa tab Masuk/Daftar di bawah judul: beri jarak ke formulir */
